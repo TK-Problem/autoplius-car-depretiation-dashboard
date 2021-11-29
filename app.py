@@ -2,6 +2,7 @@ from dash import Dash, dcc, html, no_update
 from dash.dependencies import Input, Output
 import plotly.express as px
 import pandas as pd
+from utils import reduce_mem_usage, get_data, my_template
 
 # read .csv from dropbox link.
 df_png = pd.read_csv('https://www.dropbox.com/s/9yahgizebzqwdhn/png_database.csv?dl=1')
@@ -11,6 +12,8 @@ car_name_dict = [{'label': _, 'value': _} for _ in df_png.Car.unique()]
 df_png.set_index(['Car', 'Year_made'], inplace=True)
 # download devaluation data
 df_dev = pd.read_csv('https://www.dropbox.com/s/06dpd184dig2jcp/0_all_deval_prices.csv?dl=1')
+# reduce memory usage for better performance
+df_dev = reduce_mem_usage(df_dev)
 
 
 app = Dash(__name__,
@@ -37,9 +40,10 @@ app.layout = html.Div([
         placeholder="Select the year car was made"
     ),
     html.Hr(),
-    dcc.Graph(id="deval-chart"),
+    dcc.Graph(id="deval-chart",
+              config={'displayModeBar': False, 'responsive': False}),
     html.Hr(),
-    html.Img(id='deval-auto-plius-img', src=''),
+    html.Img(id='deval-auto-plius-img', src='', style={'width': '100%'}),
 ])
 
 
@@ -98,58 +102,13 @@ def update_line_chart(car_name, year_made):
     fig.update_yaxes(tickformat='000')
     # update hovering
     fig.update_traces(mode="markers+lines",
-                      hovertemplate='<br><b>%{x} metai</b><br>' + '%{customdata[0]}' + '<extra></extra>')
+                      hovertemplate='%{customdata[1]}: <b>%{y}€</b><br>%{customdata[0]}')
     # update legend location
     fig.update_layout(legend_title_text='',
+                      hovermode="x unified",
+                      template=my_template,
                       legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=0.57, font_size=14))
     return fig
-
-
-"""
-Helper functions
-"""
-
-
-def get_data(df, car_name, year_made):
-    """
-    Selects data only for specific  car (car_name variable) made (year_made variable).
-    Creates new column with message for hovering with mouse.
-    Input:
-        df, pandas DataFrame
-        car_name, str
-        year_made, int
-    Output:
-        pandas DataFrame
-    """
-    # select data for car made at specific year
-    df_plot = df.loc[(df.Car == car_name) & (df.Year_made == year_made)].copy()
-    # reshape DataFrame
-    df_plot = pd.melt(df_plot, id_vars=['Year', 'Car', 'Year_made'], var_name='Range', value_name='Price')
-    # rename price ranges to lithuanian
-    df_plot.Range = df_plot.Range.replace({'Low': 'Mažiausia kaina',
-                                           'Medium': 'Vidutinė kaina',
-                                           'High': 'Didžiausia kaina'})
-
-    def format_msg(row, min_year=2011):
-        """
-        Helper function to generate hover message.
-        """
-        if row['Year'] == min_year:
-            return f"{row['Range']} buvo {row['Price']}€."
-        else:
-            if row['Change'] > 0:
-                return f"{row['Range']} {row['Price']}€ Per metus pakilo {row['Change'] * 100:.1f}%."
-            elif row['Change'] < 0:
-                return f"{row['Range']} {row['Price']}€ Per metus nukrito {row['Change'] * 100:.1f}%."
-            else:
-                return f"Kaina {row['Price']}€ Per metus nepakito."
-
-    # calculate pct price change
-    df_plot['Change'] = df_plot.Price / df_plot.Price.shift(1) - 1
-    # create new column with message for hovering
-    df_plot['Msg'] = df_plot.apply(lambda x: format_msg(x, df_plot.Year.min()), axis=1)
-
-    return df_plot
 
 
 if __name__ == '__main__':
