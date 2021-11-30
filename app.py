@@ -55,26 +55,26 @@ tab2_content = dbc.Card(
 
 app.layout = dbc.Container([
     html.Div([
-    html.H4('Car selection'),
-    dcc.Dropdown(
-        id='car-name-drop-menu',
-        options=car_name_dict,
-        value='car-name',
-        clearable=False,
-        placeholder="Select car"
-    ),
-    dbc.Fade(
-            dbc.Tabs(
-                [
-                    dbc.Tab(tab1_content, label="Tab 1"),
-                    dbc.Tab(tab2_content, label="Tab 2"),
-                ]
-            ),
-            id="tabs-fade",
-            is_in=False,
-            appear=False,
-    ),
-])
+        html.H4('Automobilio modelio pasirinkimas'),
+        dcc.Dropdown(
+            id='car-name-drop-menu',
+            options=car_name_dict,
+            value='car-name',
+            clearable=False,
+            placeholder="Pasirinkite automobilio modelį"
+        ),
+        dbc.Fade(
+                dbc.Tabs(
+                    [
+                        dbc.Tab(tab1_content, label="Kainų kitimas", className="nav nav-tabs"),
+                        dbc.Tab(tab2_content, label="Kainų kitimo dinamika", className="nav nav-tabs"),
+                    ]
+                ),
+                id="tabs-fade",
+                is_in=False,
+                appear=False,
+        ),
+    ])
 ])
 
 

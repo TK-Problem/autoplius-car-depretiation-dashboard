@@ -136,11 +136,11 @@ def get_data_graph_right(df, car_name):
         msg = f"<b>{row['Year_made']}</b> metais pagaminto <br>"
         msg += f"{row['Car']}<br>vidutinė {row['Range'].lower()} <br>"
         if row['PCT_change'] < 0:
-            msg += f"nukrito {row['PCT_change']:.1f}%."
+            msg += f"per metus nukrito {row['PCT_change']:.1f}%."
         elif row['PCT_change'] > 0:
-            msg += f"pakilo {row['PCT_change']:.1f}%."
+            msg += f"per metus pakilo {row['PCT_change']:.1f}%."
         else:
-            msg += f'nepakito.'
+            msg += f'per metus nepakito.'
 
         # revome y-axis label from appearing during hover
         return msg + '<extra></extra>'
