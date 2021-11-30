@@ -1,8 +1,15 @@
+# packages for dash app
 from dash import Dash, dcc, html, no_update
 from dash.dependencies import Input, Output
+# plotting libraries
 import plotly.express as px
+import plotly.graph_objects as go
+# Data processing
 import pandas as pd
-from utils import reduce_mem_usage, get_data, my_template
+import numpy as np
+# custom helper functions
+from utils import reduce_mem_usage, get_data_graph_left, my_template, get_data_graph_right
+
 
 # read .csv from dropbox link.
 df_png = pd.read_csv('https://www.dropbox.com/s/9yahgizebzqwdhn/png_database.csv?dl=1')
@@ -40,7 +47,9 @@ app.layout = html.Div([
         placeholder="Select the year car was made"
     ),
     html.Hr(),
-    dcc.Graph(id="deval-chart",
+    dcc.Graph(id="left-deval-chart",
+              config={'displayModeBar': False, 'responsive': False}),
+    dcc.Graph(id="right-deval-chart",
               config={'displayModeBar': False, 'responsive': False}),
     html.Hr(),
     html.Img(id='deval-auto-plius-img', src='', style={'width': '100%'}),
@@ -85,15 +94,15 @@ def autoplius_png(car_name, year_made):
 
 
 @app.callback(
-    Output("deval-chart", "figure"),
+    Output("left-deval-chart", "figure"),
     [Input(component_id='car-name-drop-menu', component_property='value'),
      Input(component_id='car-year-drop-menu', component_property='value')])
-def update_line_chart(car_name, year_made):
+def update_left_chart(car_name, year_made):
     global df_dev
     # no changes are made if default dropdown menu values are provided
     if year_made == 'year' or car_name == 'car-name':
         return no_update
-    df_plot = get_data(df_dev, car_name, year_made)
+    df_plot = get_data_graph_left(df_dev, car_name, year_made)
 
     # create figure object
     fig = px.line(df_plot, x="Year", y="Price", color='Range', hover_data=['Msg', 'Range'],
@@ -107,7 +116,43 @@ def update_line_chart(car_name, year_made):
     fig.update_layout(legend_title_text='',
                       hovermode="x unified",
                       template=my_template,
-                      legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=0.57, font_size=14))
+                      legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5, font_size=14))
+    return fig
+
+
+@app.callback(
+    Output("right-deval-chart", "figure"),
+    [Input(component_id='car-name-drop-menu', component_property='value')])
+def update_right_chart(car_name):
+    global df_dev
+    if car_name == 'car-name':
+        return no_update
+    # select spesific data
+    df_plot, price_median = get_data_graph_right(df_dev, car_name)
+
+    # create figure with min, max and avg. price changes
+    fig = px.line(df_plot, x="Year_diff", y="PCT_change",
+                  color='Range', hover_data=['Hover_msg'],
+                  labels={'PCT_change': 'Metinis kainos pokytis (%)', 'Year_diff': 'Metų skaičius nuo pagaminimo'})
+
+    # update hovering
+    fig.update_traces(mode="markers", hovertemplate='%{customdata[0]}')
+
+    # add median yearly price change
+    fig.add_trace(go.Scatter(x=price_median.index, y=price_median, name='Metinio kainos pokytčio mediana',
+                             marker=dict(size=10), line=dict(color='firebrick', width=4), line_shape='spline',
+                             hovertemplate='%{y:.1f}%'))
+
+    # update axis values
+    fig.update_xaxes(tickvals=np.arange(price_median.index.min(), price_median.index.max() + 1))
+    # limit y- axis range if outliers are present
+    if price_median.max() * 3 < df_plot.PCT_change.max() or price_median.min() * 3 > df_plot.PCT_change.min():
+        fig.update_yaxes(range=[df_plot.PCT_change.quantile(0.05), df_plot.PCT_change.quantile(0.95)])
+
+    fig.update_layout(legend_title_text='',
+                      template=my_template,
+                      legend=dict(orientation="h", yanchor="top", y=1.05, xanchor="center", x=0.5, font_size=14))
+
     return fig
 
 

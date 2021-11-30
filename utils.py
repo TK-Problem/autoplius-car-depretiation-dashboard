@@ -53,7 +53,7 @@ def reduce_mem_usage(df, verbose=False):
     return df
 
 
-def get_data(df, car_name, year_made):
+def get_data_graph_left(df, car_name, year_made):
     """
     Selects data only for specific  car (car_name variable) made (year_made variable).
     Creates new column with message for hovering with mouse.
@@ -98,3 +98,53 @@ def get_data(df, car_name, year_made):
     df_plot['Msg'] = df_plot.apply(lambda x: format_msg(x, df_plot.Year.min()), axis=1)
 
     return df_plot
+
+
+def get_data_graph_right(df, car_name):
+    """
+    Transforms pandas DataFrame for plotling prices.
+    Calculates median price change
+    Input:
+        df, pandas DataFrame
+        car_name, str, car name, e.g. 'Volkswagen Golf Sportsvan'
+    Output:
+        pandas DataFrame
+    """
+    df_plot = df.loc[df.Car == car_name].copy()
+    # calculate how many years passed
+    df_plot['Year_diff'] = df_plot['Year'] - df_plot['Year_made']
+    # reshape DataFrame
+    df_plot = pd.melt(df_plot[['Year_made', 'Car', 'Low', 'Medium', 'High', 'Year_diff']],
+                      id_vars=['Year_made', 'Car', 'Year_diff'], var_name='Range', value_name='Price')
+
+    # rename price ranges to lithuanian
+    df_plot.Range = df_plot.Range.replace({'Low': 'Mažiausia kaina',
+                                           'Medium': 'Vidutinė kaina',
+                                           'High': 'Didžiausia kaina'})
+
+    # calculate percentage price changes
+    df_plot['PCT_change'] = (df_plot['Price'] / df_plot['Price'].shift(1) - 1) * 100
+    # remove prices from same year
+    df_plot = df_plot.loc[df_plot.Year_diff != 0].copy()
+    # calculate avg price change
+    price_median = df_plot.groupby('Year_diff')['PCT_change'].median()
+
+    def gen_hover_txt(row):
+        """
+        Generate hover message
+        """
+        msg = f"<b>{row['Year_made']}</b> metais pagaminto <br>"
+        msg += f"{row['Car']}<br>vidutinė {row['Range'].lower()} <br>"
+        if row['PCT_change'] < 0:
+            msg += f"nukrito {row['PCT_change']:.1f}%."
+        elif row['PCT_change'] > 0:
+            msg += f"pakilo {row['PCT_change']:.1f}%."
+        else:
+            msg += f'nepakito.'
+
+        # revome y-axis label from appearing during hover
+        return msg + '<extra></extra>'
+
+    # generate hover message
+    df_plot['Hover_msg'] = df_plot.apply(gen_hover_txt, axis=1)
+    return df_plot, price_median
