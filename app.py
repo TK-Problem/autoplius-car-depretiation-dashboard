@@ -1,6 +1,7 @@
 # packages for dash app
 from dash import Dash, dcc, html, no_update
 from dash.dependencies import Input, Output
+import dash_bootstrap_components as dbc
 # plotting libraries
 import plotly.express as px
 import plotly.graph_objects as go
@@ -28,8 +29,32 @@ app = Dash(__name__,
            suppress_callback_exceptions=True)
 server = app.server
 
+tab1_content = dbc.Card(
+                dbc.CardBody(
+                    [
+                        html.H4("Pagaminimo metai", className="card-title"),
+                        dcc.Dropdown(id='car-year-drop-menu', options=[], value='year', clearable=False,
+                                     placeholder="Pasirinkite mašinos pagaminimo metus"),
+                        html.Hr(),
+                        dcc.Graph(id="left-deval-chart", config={'displayModeBar': False, 'responsive': False}),
+                        html.Img(id='deval-auto-plius-img', src='', style={'width': '100%'}),
+                    ]
+                ),
+                className="mt-3",
+)
 
-app.layout = html.Div([
+tab2_content = dbc.Card(
+    dbc.CardBody(
+        [
+            html.H4("Kainos metiniai pokyčiai", className="card-title"),
+            dcc.Graph(id="right-deval-chart", config={'displayModeBar': False, 'responsive': False}),
+        ]
+    ),
+    className="mt-3",
+)
+
+app.layout = dbc.Container([
+    html.Div([
     html.H4('Car selection'),
     dcc.Dropdown(
         id='car-name-drop-menu',
@@ -38,27 +63,25 @@ app.layout = html.Div([
         clearable=False,
         placeholder="Select car"
     ),
-    html.H4('Year'),
-    dcc.Dropdown(
-        id='car-year-drop-menu',
-        options=[],
-        value='year',
-        clearable=False,
-        placeholder="Select the year car was made"
+    dbc.Fade(
+            dbc.Tabs(
+                [
+                    dbc.Tab(tab1_content, label="Tab 1"),
+                    dbc.Tab(tab2_content, label="Tab 2"),
+                ]
+            ),
+            id="tabs-fade",
+            is_in=False,
+            appear=False,
     ),
-    html.Hr(),
-    dcc.Graph(id="left-deval-chart",
-              config={'displayModeBar': False, 'responsive': False}),
-    dcc.Graph(id="right-deval-chart",
-              config={'displayModeBar': False, 'responsive': False}),
-    html.Hr(),
-    html.Img(id='deval-auto-plius-img', src='', style={'width': '100%'}),
+])
 ])
 
 
 @app.callback(
     [Output(component_id='car-year-drop-menu', component_property='options'),
-     Output(component_id='car-year-drop-menu', component_property='value')],
+     Output(component_id='car-year-drop-menu', component_property='value'),
+     Output(component_id='tabs-fade', component_property='is_in')],
     [Input(component_id='car-name-drop-menu', component_property='value')])
 def update_year_made(car_name):
     """
@@ -77,7 +100,7 @@ def update_year_made(car_name):
     years = df_png.loc[car_name].index
     years = [{'label': year, 'value': year} for year in years]
     # update with oldest available years
-    return years, years[0]['value']
+    return years, years[0]['value'], True
 
 
 @app.callback(
