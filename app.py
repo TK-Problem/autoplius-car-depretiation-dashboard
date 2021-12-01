@@ -99,7 +99,8 @@ app.layout = html.Div(
                             clearable=False,
                             placeholder="Pasirinkite automobilio modelį"
                         ),
-                        dbc.Fade(
+                        html.Br(),
+                        dbc.Collapse(
                             html.Div(
                                 [
                                     dcc.Tabs(id="tabs-example-graph", value='tab-1', children=[
@@ -107,10 +108,10 @@ app.layout = html.Div(
                                         dcc.Tab(label='Kainų kitimo dinamika', children=[tab2_content], value='tab-č'),
                                         ]
                                     ),
+                                    html.Br(),
                                 ]),
-                            id="tabs-fade",
-                            is_in=False,
-                            appear=False,
+                            id="tabs-collapse",
+                            is_open=False,
                         )
                     ]
                 )
@@ -121,11 +122,10 @@ app.layout = html.Div(
 )
 
 
-
 @app.callback(
     [Output(component_id='car-year-drop-menu', component_property='options'),
      Output(component_id='car-year-drop-menu', component_property='value'),
-     Output(component_id='tabs-fade', component_property='is_in')],
+     Output(component_id='tabs-collapse', component_property='is_open')],
     [Input(component_id='car-name-drop-menu', component_property='value')])
 def update_year_made(car_name):
     """
