@@ -29,6 +29,35 @@ app = Dash(__name__,
            suppress_callback_exceptions=True)
 server = app.server
 
+header = html.Header(
+    dbc.Row(
+        [
+            dbc.Col(
+                [
+                    html.Img(id="logo-image", src='assets/app_logo.png',  height='100px'),
+                ],
+                width={"size": 3},
+            ),
+        ],
+    ),
+    className='card text-white bg-dark mb-3'
+)
+
+
+footer = html.Footer(
+    dbc.Row(
+        dbc.Col(
+            [
+                html.Div("Sukurta Tomo Uždavinio", style={'textAlign': 'center'}),
+                html.Div("t.uzdavinys@gmail.com", style={'textAlign': 'center'})
+            ],
+            width={"size": 6, "offset": 3},
+
+        ),
+    ),
+    className='card text-white bg-dark mb-3'
+)
+
 
 tab1_content = dbc.Card(
                 dbc.CardBody(
@@ -56,29 +85,41 @@ tab2_content = dbc.Card(
     className="mt-3",
 )
 
-app.layout = dbc.Container([
-    html.Div([
-        html.H4('Automobilio modelio pasirinkimas'),
-        dcc.Dropdown(
-            id='car-name-drop-menu',
-            options=car_name_dict,
-            value='car-name',
-            clearable=False,
-            placeholder="Pasirinkite automobilio modelį"
+app.layout = html.Div(
+    [
+        header,
+        dbc.Container(
+            [
+                html.Div(
+                    [
+                        dcc.Dropdown(
+                            id='car-name-drop-menu',
+                            options=car_name_dict,
+                            value='car-name',
+                            clearable=False,
+                            placeholder="Pasirinkite automobilio modelį"
+                        ),
+                        dbc.Fade(
+                            html.Div(
+                                [
+                                    dcc.Tabs(id="tabs-example-graph", value='tab-1', children=[
+                                        dcc.Tab(label='Kainų kitimas', children=[tab1_content], value='tab-1'),
+                                        dcc.Tab(label='Kainų kitimo dinamika', children=[tab2_content], value='tab-č'),
+                                        ]
+                                    ),
+                                ]),
+                            id="tabs-fade",
+                            is_in=False,
+                            appear=False,
+                        )
+                    ]
+                )
+            ]
         ),
-        dbc.Fade(
-                html.Div([
-                    dcc.Tabs(id="tabs-example-graph", value='tab-1', children=[
-                        dcc.Tab(label='Kainų kitimas', children=[tab1_content], value='tab-1'),
-                        dcc.Tab(label='Kainų kitimo dinamika', children=[tab2_content], value='tab-č'),
-                    ]),
-                ]),
-                id="tabs-fade",
-                is_in=False,
-                appear=False,
-        ),
-    ])
-])
+        footer
+    ]
+)
+
 
 
 @app.callback(
