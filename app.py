@@ -29,14 +29,16 @@ app = Dash(__name__,
            suppress_callback_exceptions=True)
 server = app.server
 
+
 tab1_content = dbc.Card(
                 dbc.CardBody(
                     [
                         html.H4("Pagaminimo metai", className="card-title"),
                         dcc.Dropdown(id='car-year-drop-menu', options=[], value='year', clearable=False,
                                      placeholder="Pasirinkite mašinos pagaminimo metus"),
-                        html.Hr(),
+                        html.P("Grafiko aprašymas", className="card-text"),
                         dcc.Graph(id="left-deval-chart", config={'displayModeBar': False, 'responsive': False}),
+                        html.Hr(),
                         html.Img(id='deval-auto-plius-img', src='', style={'width': '100%'}),
                     ]
                 ),
@@ -47,6 +49,7 @@ tab2_content = dbc.Card(
     dbc.CardBody(
         [
             html.H4("Kainos metiniai pokyčiai", className="card-title"),
+            html.P("Modelio aprašymas", className="card-text"),
             dcc.Graph(id="right-deval-chart", config={'displayModeBar': False, 'responsive': False}),
         ]
     ),
@@ -64,12 +67,12 @@ app.layout = dbc.Container([
             placeholder="Pasirinkite automobilio modelį"
         ),
         dbc.Fade(
-                dbc.Tabs(
-                    [
-                        dbc.Tab(tab1_content, label="Kainų kitimas", className="nav nav-tabs"),
-                        dbc.Tab(tab2_content, label="Kainų kitimo dinamika", className="nav nav-tabs"),
-                    ]
-                ),
+                html.Div([
+                    dcc.Tabs(id="tabs-example-graph", value='tab-1', children=[
+                        dcc.Tab(label='Kainų kitimas', children=[tab1_content], value='tab-1'),
+                        dcc.Tab(label='Kainų kitimo dinamika', children=[tab2_content], value='tab-č'),
+                    ]),
+                ]),
                 id="tabs-fade",
                 is_in=False,
                 appear=False,
@@ -169,12 +172,12 @@ def update_right_chart(car_name):
     # update axis values
     fig.update_xaxes(tickvals=np.arange(price_median.index.min(), price_median.index.max() + 1))
     # limit y- axis range if outliers are present
-    if price_median.max() * 3 < df_plot.PCT_change.max() or price_median.min() * 3 > df_plot.PCT_change.min():
+    if price_median.max() * 5 < df_plot.PCT_change.max() or price_median.min() * 5 > df_plot.PCT_change.min():
         fig.update_yaxes(range=[df_plot.PCT_change.quantile(0.05), df_plot.PCT_change.quantile(0.95)])
 
     fig.update_layout(legend_title_text='',
                       template=my_template,
-                      legend=dict(orientation="h", yanchor="top", y=1.05, xanchor="center", x=0.5, font_size=14))
+                      legend=dict(orientation="h", yanchor="top", y=1.1, xanchor="center", x=0.5, font_size=14))
 
     return fig
 
