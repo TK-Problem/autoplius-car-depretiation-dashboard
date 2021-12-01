@@ -1,6 +1,6 @@
 # packages for dash app
 from dash import Dash, dcc, html, no_update
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 # plotting libraries
 import plotly.express as px
@@ -65,10 +65,23 @@ tab1_content = dbc.Card(
                         html.H4("Pagaminimo metai", className="card-title"),
                         dcc.Dropdown(id='car-year-drop-menu', options=[], value='year', clearable=False,
                                      placeholder="Pasirinkite mašinos pagaminimo metus"),
-                        html.P("Grafiko aprašymas", className="card-text"),
+                        html.Br(),
+                        html.P("Lyginamosios kainos X metais pagamintų Y automobilių kainos ir jų kitimas, "
+                               "neatsižvelgiant į automobilių komlektaciją ir būklę.", className="card-text"),
                         dcc.Graph(id="left-deval-chart", config={'displayModeBar': False, 'responsive': False}),
-                        html.Hr(),
-                        html.Img(id='deval-auto-plius-img', src='', style={'width': '100%'}),
+                        html.Br(),
+                        dbc.Button(
+                                    "Rodyti originalų autoplius grafiką",
+                                    id="image-collapse-button",
+                                    className="btn btn-dark"
+                                ),
+
+                        dbc.Collapse(
+                                    [html.Br(),
+                                     html.Img(id='deval-auto-plius-img', src='', style={'width': '100%'})],
+                                    id="png-collapse",
+                                    is_open=False,
+                        ),
                     ]
                 ),
                 className="mt-3",
@@ -145,6 +158,17 @@ def update_year_made(car_name):
     years = [{'label': year, 'value': year} for year in years]
     # update with oldest available years
     return years, years[0]['value'], True
+
+
+@app.callback(
+    Output("png-collapse", "is_open"),
+    [Input("image-collapse-button", "n_clicks")],
+    [State("png-collapse", "is_open")],
+)
+def toggle_collapse(n, is_open):
+    if n:
+        return not is_open
+    return is_open
 
 
 @app.callback(
