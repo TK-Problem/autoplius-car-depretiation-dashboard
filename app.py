@@ -66,8 +66,7 @@ tab1_content = dbc.Card(
                         dcc.Dropdown(id='car-year-drop-menu', options=[], value='year', clearable=False,
                                      placeholder="Pasirinkite mašinos pagaminimo metus"),
                         html.Br(),
-                        html.P("Lyginamosios kainos X metais pagamintų Y automobilių kainos ir jų kitimas, "
-                               "neatsižvelgiant į automobilių komlektaciją ir būklę.", className="card-text"),
+                        html.P('', id="deval-chart-description", className="tab-text"),
                         dcc.Graph(id="left-deval-chart", config={'displayModeBar': False, 'responsive': False}),
                         html.Br(),
                         dbc.Button(
@@ -91,12 +90,24 @@ tab2_content = dbc.Card(
     dbc.CardBody(
         [
             html.H4("Kainos metiniai pokyčiai", className="card-title"),
-            html.P("Modelio aprašymas", className="card-text"),
+            html.P("Modelio aprašymas.", className="card-text"),
             dcc.Graph(id="right-deval-chart", config={'displayModeBar': False, 'responsive': False}),
         ]
     ),
     className="mt-3",
 )
+
+
+tab3_content = dbc.Card(
+    dbc.CardBody(
+        [
+            html.H4("Modelis", className="card-title"),
+            html.P("Laikinas tekstas (PLACEHOLDER)", className="card-text")
+        ]
+    ),
+    className="mt-3",
+)
+
 
 app.layout = html.Div(
     [
@@ -117,8 +128,15 @@ app.layout = html.Div(
                             html.Div(
                                 [
                                     dcc.Tabs(id="tabs-example-graph", value='tab-1', children=[
-                                        dcc.Tab(label='Kainų kitimas', children=[tab1_content], value='tab-1'),
-                                        dcc.Tab(label='Kainų kitimo dinamika', children=[tab2_content], value='tab-č'),
+                                        dcc.Tab(label='Kainų kitimas',
+                                                children=[tab1_content],
+                                                value='tab-1'),
+                                        dcc.Tab(label='Kainų kitimo dinamika',
+                                                children=[tab2_content],
+                                                value='tab-2'),
+                                        dcc.Tab(label='Kainos nuvertėjimo modelis',
+                                                children=[tab3_content],
+                                                value='tab-3'),
                                         ]
                                     ),
                                     html.Br(),
@@ -172,16 +190,21 @@ def toggle_collapse(n, is_open):
 
 
 @app.callback(
-    [Output(component_id='deval-auto-plius-img', component_property='src')],
+    [Output(component_id='deval-auto-plius-img', component_property='src'),
+     Output(component_id="deval-chart-description", component_property='children')],
     [Input(component_id='car-name-drop-menu', component_property='value'),
      Input(component_id='car-year-drop-menu', component_property='value')])
 def autoplius_png(car_name, year_made):
     global df_png
+    # generate message for graph
+    msg = f"Lyginamosios kainos {year_made} metais pagamintų {car_name} automobilių kainos ir jų " \
+          f"kitimas, neatsižvelgiant į automobilių komlektaciją ir būklę. "
+
     # no changes are made if default dropdown menu values are provided
     if year_made == 'year' or car_name == 'car-name':
         return no_update
     else:
-        return [df_png.loc[(car_name, int(year_made))].png_url]
+        return [df_png.loc[(car_name, int(year_made))].png_url, msg]
 
 
 @app.callback(
