@@ -1,5 +1,7 @@
 from dash import dcc, html
 import dash_bootstrap_components as dbc
+import plotly.express as px
+import pandas as pd
 
 
 header = html.Header(
@@ -31,6 +33,11 @@ footer = html.Footer(
     className='card text-white bg-dark mb-3'
 )
 
+# first basic DataFrame for better performance
+_df = pd.DataFrame({'Year': [2020, 2021, 2020, 2021],
+                    'Price': [10000, 20000, 30000, 40000],
+                    'Range': ['Low', 'Low', 'High', 'High']})
+
 
 tab1_content = dbc.Card(
                 dbc.CardBody(
@@ -40,7 +47,9 @@ tab1_content = dbc.Card(
                                      placeholder="Pasirinkite mašinos pagaminimo metus"),
                         html.Br(),
                         html.P('', id="deval-chart-description", className="tab-text"),
-                        dcc.Graph(id="left-deval-chart", config={'displayModeBar': False, 'responsive': False}),
+                        # generate random graph for better performance
+                        dcc.Graph(figure=px.line(_df, x="Year", y="Price", color='Range'),
+                                  id="left-deval-chart", config={'displayModeBar': False, 'responsive': False}),
                         html.Br(),
                         dbc.Button(
                                     "Rodyti originalų autoplius grafiką",
@@ -63,8 +72,9 @@ tab2_content = dbc.Card(
     dbc.CardBody(
         [
             html.H4("Kainos metiniai pokyčiai", className="card-title"),
-            html.P("Modelio aprašymas.", className="card-text"),
+            html.P("Iš surinktų autoplius duomenų mes negalime įvertinti kainų rėžių tikslumo. Dižiausia X metų kaina galėjo būti išskaičiuota iš 1 skelbimo arba iš >100. Mes geriausiu atveju galime įvertinti kainos kritimo tendenciją, kurią apskaičiuojau kainos pokyčių medianos.", className="card-text"),
             dcc.Graph(id="right-deval-chart", config={'displayModeBar': False, 'responsive': False}),
+            html.P("Šią tendenciją galime palyginti su visų X gamintojo automobilių vidutinę kainos kitimo tendenciją ir visų automobilių kitimo tendencija.", className="card-text"),
         ]
     ),
     className="mt-3",
