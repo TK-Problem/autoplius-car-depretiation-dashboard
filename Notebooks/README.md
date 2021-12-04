@@ -12,11 +12,13 @@
 
 ### Data analysis
 
-`data_analysis.ipynb` analysis data scraped from autoplius.lt website:
+`data_analysis.ipynb` contains car price devaluation analysis using autoplius.lt scraped data. 
 
-* create `plotly` figures for analysing specific car devaluation over years.
+**TL;DR**:
+
+* identify price devaluation trends for different manufacturers and car models,
 
 **Used packages:**
 
 * `pandas`
-* `plotly`
+* `matplotlib`
