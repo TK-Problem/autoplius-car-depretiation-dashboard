@@ -5,7 +5,7 @@ import plotly.io as pio
 
 # modify generic template
 my_template = pio.templates["plotly"]
-my_template.layout['colorway'] = ('#7fdffa', '#4c93c5', '#60ade1')
+my_template.layout['colorway'] = ('#60ade1', '#4c93c5', '#7fdffa')
 my_template.layout['plot_bgcolor'] = 'rgba(0,0,0,0)'
 my_template.layout['yaxis']['gridcolor'] = 'rgba(1,1,1,0.3)'
 my_template.layout['xaxis']['gridcolor'] = 'rgba(1,1,1,0.3)'
@@ -96,6 +96,8 @@ def get_data_tab_1_graph(df, car_name, year_made):
     df_plot['Change'] = df_plot.Price / df_plot.Price.shift(1) - 1
     # create new column with message for hovering
     df_plot['Msg'] = df_plot.apply(lambda x: format_msg(x, df_plot.Year.min()), axis=1)
+    # flip order for plotly colors, the highest price should be first, lowest- last
+    df_plot = df_plot.iloc[::-1]
 
     return df_plot
 
@@ -122,11 +124,23 @@ def get_data_tab_2_graph(df, car_name):
     df_plot.Range = df_plot.Range.replace({'Low': 'Mažiausios kainos pokyčiai',
                                            'Medium': 'Vidutinės kainos pokyčiai',
                                            'High': 'Didžiausios kainos pokyčiai'})
+    # create price dictonary
+    price_dict = df_plot.set_index(['Year_made', 'Range', 'Year_diff'])
+    price_dict = price_dict['Price']
+
+    # calculate price difference
+    def calculate_diff(row):
+        if (row['Year_made'], row['Range'], row['Year_diff'] - 1) in price_dict.index:
+            price_change = row['Price'] / price_dict.loc[(row['Year_made'], row['Range'], row['Year_diff'] - 1)]
+            return (price_change - 1) * 100
+        else:
+            return np.nan
 
     # calculate percentage price changes
-    df_plot['PCT_change'] = (df_plot['Price'] / df_plot['Price'].shift(1) - 1) * 100
-    # remove prices from same year
-    df_plot = df_plot.loc[df_plot.Year_diff != 0].copy()
+    df_plot['PCT_change'] = df_plot.apply(calculate_diff, axis=1)
+    # remove nan values from calculations
+    df_plot = df_plot.dropna()
+
     # calculate avg price change
     price_median = df_plot.groupby('Year_diff')['PCT_change'].median()
 
@@ -135,7 +149,7 @@ def get_data_tab_2_graph(df, car_name):
         Generate hover message
         """
         msg = f"<b>{row['Year_made']}</b> metais pagaminto <br>"
-        # generate new word based on range
+        # generate new word based on range dictonary
         d = {'Mažiausios kainos pokyčiai': 'mažiausia kaina',
              'Vidutinės kainos pokyčiai': 'vidutinė kaina',
              'Didžiausios kainos pokyčiai': 'didžiausia kaina'}
@@ -153,5 +167,8 @@ def get_data_tab_2_graph(df, car_name):
 
     # generate hover message
     df_plot['Hover_msg'] = df_plot.apply(gen_hover_txt, axis=1)
+
+    # flip order for plotly colors, the highest price should be first, lowest- last
+    df_plot = df_plot.iloc[::-1]
 
     return df_plot, price_median
