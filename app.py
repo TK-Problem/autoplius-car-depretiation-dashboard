@@ -2,10 +2,10 @@
 from dash import Dash, no_update
 from dash.dependencies import Input, Output, State
 # plotting libraries
-import plotly.express as px
+# import plotly.express as px
 import plotly.graph_objects as go
 # Data processing
-import pandas as pd
+# import pandas as pd
 import numpy as np
 # custom helper functions
 from utils import reduce_mem_usage, get_data_graph_left, my_template, get_data_graph_right
@@ -13,13 +13,13 @@ from utils import reduce_mem_usage, get_data_graph_left, my_template, get_data_g
 from layouts import *
 
 # read .csv from dropbox link.
-df_png = pd.read_csv('https://www.dropbox.com/s/9yahgizebzqwdhn/png_database.csv?dl=1')
+df_png = pd.read_csv('https://www.dropbox.com/s/i9vzubdk5klhw5q/png_database.csv?dl=1')
 # generate car id dictionary for dropdown menu
 car_name_dict = [{'label': _, 'value': _} for _ in df_png.Car.unique()]
 # reset index for simpler data accessing
 df_png.set_index(['Car', 'Year_made'], inplace=True)
 # download devaluation data
-df_dev = pd.read_csv('https://www.dropbox.com/s/06dpd184dig2jcp/0_all_deval_prices.csv?dl=1')
+df_dev = pd.read_csv('https://www.dropbox.com/s/81pxbt3sila32ao/0_all_deval_prices.csv?dl=1')
 # reduce memory usage for better performance
 df_dev = reduce_mem_usage(df_dev)
 
@@ -81,14 +81,18 @@ def update_year_made(car_name):
 
 
 @app.callback(
-    Output("png-collapse", "is_open"),
+    [Output("png-collapse", "is_open"),
+     Output("image-collapse-button", "children")],
     [Input("image-collapse-button", "n_clicks")],
     [State("png-collapse", "is_open")],
 )
 def toggle_collapse(n, is_open):
     if n:
-        return not is_open
-    return is_open
+        if is_open:
+            return not is_open, 'Rodyti originalų autoplius grafiką'
+        else:
+            return not is_open, 'Slėpti originalų autoplius grafiką'
+    return is_open, no_update
 
 
 @app.callback(
@@ -110,14 +114,16 @@ def autoplius_png(car_name, year_made):
 
 
 @app.callback(
-    Output("left-deval-chart", "figure"),
+    Output("tab-1-deval-chart", "figure"),
     [Input(component_id='car-name-drop-menu', component_property='value'),
      Input(component_id='car-year-drop-menu', component_property='value')])
-def update_left_chart(car_name, year_made):
+def update_tab_1_chart(car_name, year_made):
     global df_dev
     # no changes are made if default dropdown menu values are provided
     if year_made == 'year' or car_name == 'car-name':
         return no_update
+
+    # generate data for left graph
     df_plot = get_data_graph_left(df_dev, car_name, year_made)
 
     # create figure object
@@ -137,13 +143,15 @@ def update_left_chart(car_name, year_made):
 
 
 @app.callback(
-    Output("right-deval-chart", "figure"),
-    [Input(component_id='car-name-drop-menu', component_property='value')])
-def update_right_chart(car_name):
+    [Output("tab-2-deval-chart", "figure"),
+     Output("tab-2-chart-fig-des", "children")],
+    [Input(component_id='car-name-drop-menu',
+           component_property='value')])
+def update_tab_2_chart(car_name):
     global df_dev
     if car_name == 'car-name':
         return no_update
-    # select spesific data
+    # select specific data
     df_plot, price_median = get_data_graph_right(df_dev, car_name)
 
     # create figure with min, max and avg. price changes
@@ -154,8 +162,11 @@ def update_right_chart(car_name):
     # update hovering
     fig.update_traces(mode="markers", hovertemplate='%{customdata[0]}')
 
+    # car model
+    # car_model = ' '.join(car_name.split()[1:])
+
     # add median yearly price change
-    fig.add_trace(go.Scatter(x=price_median.index, y=price_median, name='Metinio kainos pokytčio mediana',
+    fig.add_trace(go.Scatter(x=price_median.index, y=price_median, name=f'Metinio {car_name} kainos pokyčio mediana',
                              marker=dict(size=10), line=dict(color='firebrick', width=4, shape='spline'),
                              hovertemplate='%{y:.1f}%'))
 
@@ -168,8 +179,9 @@ def update_right_chart(car_name):
     fig.update_layout(legend_title_text='',
                       template=my_template,
                       legend=dict(orientation="h", yanchor="top", y=1.1, xanchor="center", x=0.5, font_size=14))
-
-    return fig
+    txt = f"Šią tendenciją palyginame su visų {car_name.split()[0]} pagamintų automobilių " \
+          f"ir visų automobilių vidutine kainos kitimo tendencijomis. "
+    return fig, txt
 
 
 if __name__ == '__main__':

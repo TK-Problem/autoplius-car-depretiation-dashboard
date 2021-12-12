@@ -49,7 +49,7 @@ tab1_content = dbc.Card(
                         html.P('', id="deval-chart-description", className="tab-text"),
                         # generate random graph for better performance
                         dcc.Graph(figure=px.line(_df, x="Year", y="Price", color='Range'),
-                                  id="left-deval-chart", config={'displayModeBar': False, 'responsive': False}),
+                                  id="tab-1-deval-chart", config={'displayModeBar': False, 'responsive': False}),
                         html.Br(),
                         dbc.Button(
                                     "Rodyti originalų autoplius grafiką",
@@ -72,9 +72,12 @@ tab2_content = dbc.Card(
     dbc.CardBody(
         [
             html.H4("Kainos metiniai pokyčiai", className="card-title"),
-            html.P("Iš surinktų autoplius duomenų mes negalime įvertinti kainų rėžių tikslumo. Dižiausia X metų kaina galėjo būti išskaičiuota iš 1 skelbimo arba iš >100. Mes geriausiu atveju galime įvertinti kainos kritimo tendenciją, kurią apskaičiuojau kainos pokyčių medianos.", className="card-text"),
-            dcc.Graph(id="right-deval-chart", config={'displayModeBar': False, 'responsive': False}),
-            html.P("Šią tendenciją galime palyginti su visų X gamintojo automobilių vidutinę kainos kitimo tendenciją ir visų automobilių kitimo tendencija.", className="card-text"),
+            html.P("Iš surinktų autoplius duomenų mes negalime įvertinti kainų rėžių tikslumo. Dižiausia X metų kaina "
+                   "galėjo būti išskaičiuota iš 1 skelbimo arba iš >100. Mes geriausiu atveju galime įvertinti kainos "
+                   "kritimo tendenciją, kurią apskaičiuojau kainos pokyčių medianos.", className="card-text"),
+            dcc.Graph(id="tab-2-deval-chart", config={'displayModeBar': False, 'responsive': False}),
+            html.P("Šią tendenciją galime palyginti su visų X gamintojo automobilių vidutinę kainos kitimo tendenciją "
+                   "ir visų automobilių kitimo tendencija.", id='tab-2-chart-fig-des', className="card-text"),
         ]
     ),
     className="mt-3",
@@ -84,8 +87,10 @@ tab2_content = dbc.Card(
 tab3_content = dbc.Card(
     dbc.CardBody(
         [
-            html.H4("Modelis", className="card-title"),
-            html.P("Laikinas tekstas (PLACEHOLDER)", className="card-text")
+            html.H4("Duomenų įvedimas", className="card-title"),
+            html.P("Laikinas tekstas", className="card-text"),
+            html.H3("Tiesinis modelis #1", className="card-title"),
+            html.P("Apskaičiuoja vidutinę kainos nuvertėjimą iš:", className="card-text")
         ]
     ),
     className="mt-3",
