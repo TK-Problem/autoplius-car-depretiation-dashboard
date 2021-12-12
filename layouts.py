@@ -24,10 +24,10 @@ footer = html.Footer(
         dbc.Col(
             [
                 html.Div("Sukurta Tomo Uždavinio", style={'textAlign': 'center'}),
-                html.Div("t.uzdavinys@gmail.com", style={'textAlign': 'center'})
+                html.Div("t.uzdavinys@gmail.com", style={'textAlign': 'center'}),
+                html.P("Projektas dar nebaigtas.", style={'textAlign': 'center'})
             ],
             width={"size": 6, "offset": 3},
-
         ),
     ),
     className='card text-white bg-dark mb-3'

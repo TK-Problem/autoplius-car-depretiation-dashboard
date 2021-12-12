@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 # import pandas as pd
 import numpy as np
 # custom helper functions
-from utils import reduce_mem_usage, get_data_graph_left, my_template, get_data_graph_right
+import utils
 # html layouts
 from layouts import *
 
@@ -21,7 +21,7 @@ df_png.set_index(['Car', 'Year_made'], inplace=True)
 # download devaluation data
 df_dev = pd.read_csv('https://www.dropbox.com/s/81pxbt3sila32ao/0_all_deval_prices.csv?dl=1')
 # reduce memory usage for better performance
-df_dev = reduce_mem_usage(df_dev)
+df_dev = utils.reduce_mem_usage(df_dev)
 
 
 app = Dash(__name__,
@@ -76,7 +76,7 @@ def update_year_made(car_name):
     # get only unique values for specific car years
     years = df_png.loc[car_name].index
     years = [{'label': year, 'value': year} for year in years]
-    # update with oldest available years
+    # update with the oldest available years
     return years, years[0]['value'], True
 
 
@@ -124,7 +124,7 @@ def update_tab_1_chart(car_name, year_made):
         return no_update
 
     # generate data for left graph
-    df_plot = get_data_graph_left(df_dev, car_name, year_made)
+    df_plot = utils.get_data_tab_1_graph(df_dev, car_name, year_made)
 
     # create figure object
     fig = px.line(df_plot, x="Year", y="Price", color='Range', hover_data=['Msg', 'Range'],
@@ -137,7 +137,7 @@ def update_tab_1_chart(car_name, year_made):
     # update legend location
     fig.update_layout(legend_title_text='',
                       hovermode="x unified",
-                      template=my_template,
+                      template=utils.my_template,
                       legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5, font_size=14))
     return fig
 
@@ -152,7 +152,7 @@ def update_tab_2_chart(car_name):
     if car_name == 'car-name':
         return no_update
     # select specific data
-    df_plot, price_median = get_data_graph_right(df_dev, car_name)
+    df_plot, price_median = utils.get_data_tab_2_graph(df_dev, car_name)
 
     # create figure with min, max and avg. price changes
     fig = px.line(df_plot, x="Year_diff", y="PCT_change",
@@ -177,8 +177,8 @@ def update_tab_2_chart(car_name):
         fig.update_yaxes(range=[df_plot.PCT_change.quantile(0.05), df_plot.PCT_change.quantile(0.95)])
 
     fig.update_layout(legend_title_text='',
-                      template=my_template,
-                      legend=dict(orientation="h", yanchor="top", y=1.1, xanchor="center", x=0.5, font_size=14))
+                      template=utils.my_template,
+                      legend=dict(orientation="h", yanchor="top", y=1.2, xanchor="center", x=0.5, font_size=14))
     txt = f"Šią tendenciją palyginame su visų {car_name.split()[0]} pagamintų automobilių " \
           f"ir visų automobilių vidutine kainos kitimo tendencijomis. "
     return fig, txt

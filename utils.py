@@ -53,7 +53,7 @@ def reduce_mem_usage(df, verbose=False):
     return df
 
 
-def get_data_graph_left(df, car_name, year_made):
+def get_data_tab_1_graph(df, car_name, year_made):
     """
     Selects data only for specific  car (car_name variable) made (year_made variable).
     Creates new column with message for hovering with mouse.
@@ -100,7 +100,7 @@ def get_data_graph_left(df, car_name, year_made):
     return df_plot
 
 
-def get_data_graph_right(df, car_name):
+def get_data_tab_2_graph(df, car_name):
     """
     Transforms pandas DataFrame for plotling prices.
     Calculates median price change
@@ -110,6 +110,7 @@ def get_data_graph_right(df, car_name):
     Output:
         pandas DataFrame
     """
+    # select data only for chosen car name
     df_plot = df.loc[df.Car == car_name].copy()
     # calculate how many years passed
     df_plot['Year_diff'] = df_plot['Year'] - df_plot['Year_made']
@@ -118,9 +119,9 @@ def get_data_graph_right(df, car_name):
                       id_vars=['Year_made', 'Car', 'Year_diff'], var_name='Range', value_name='Price')
 
     # rename price ranges to lithuanian
-    df_plot.Range = df_plot.Range.replace({'Low': 'Mažiausia kaina',
-                                           'Medium': 'Vidutinė kaina',
-                                           'High': 'Didžiausia kaina'})
+    df_plot.Range = df_plot.Range.replace({'Low': 'Mažiausios kainos pokyčiai',
+                                           'Medium': 'Vidutinės kainos pokyčiai',
+                                           'High': 'Didžiausios kainos pokyčiai'})
 
     # calculate percentage price changes
     df_plot['PCT_change'] = (df_plot['Price'] / df_plot['Price'].shift(1) - 1) * 100
@@ -134,7 +135,12 @@ def get_data_graph_right(df, car_name):
         Generate hover message
         """
         msg = f"<b>{row['Year_made']}</b> metais pagaminto <br>"
-        msg += f"{row['Car']}<br>vidutinė {row['Range'].lower()} <br>"
+        # generate new word based on range
+        d = {'Mažiausios kainos pokyčiai': 'mažiausia kaina',
+             'Vidutinės kainos pokyčiai': 'vidutinė kaina',
+             'Didžiausios kainos pokyčiai': 'didžiausia kaina'}
+
+        msg += f"{row['Car']}<br>{d[row['Range']]} <br>"
         if row['PCT_change'] < 0:
             msg += f"per metus nukrito {row['PCT_change']:.1f}%."
         elif row['PCT_change'] > 0:
@@ -142,9 +148,10 @@ def get_data_graph_right(df, car_name):
         else:
             msg += f'per metus nepakito.'
 
-        # revome y-axis label from appearing during hover
+        # remove y-axis label from appearing during hover
         return msg + '<extra></extra>'
 
     # generate hover message
     df_plot['Hover_msg'] = df_plot.apply(gen_hover_txt, axis=1)
+
     return df_plot, price_median
