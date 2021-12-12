@@ -124,22 +124,15 @@ def get_data_tab_2_graph(df, car_name):
     df_plot.Range = df_plot.Range.replace({'Low': 'Mažiausios kainos pokyčiai',
                                            'Medium': 'Vidutinės kainos pokyčiai',
                                            'High': 'Didžiausios kainos pokyčiai'})
-    # create price dictonary
-    price_dict = df_plot.set_index(['Year_made', 'Range', 'Year_diff'])
-    price_dict = price_dict['Price']
 
-    # calculate price difference
-    def calculate_diff(row):
-        if (row['Year_made'], row['Range'], row['Year_diff'] - 1) in price_dict.index:
-            price_change = row['Price'] / price_dict.loc[(row['Year_made'], row['Range'], row['Year_diff'] - 1)]
-            return (price_change - 1) * 100
-        else:
-            return np.nan
+    # calculate last year price
+    df_plot['Last_year_price'] = df_plot['Price'].shift(1)
+
+    # select only those entries where time difference is 1 year
+    df_plot = df_plot.loc[df_plot.Year_diff - df_plot.Year_diff.shift(1) == 1]
 
     # calculate percentage price changes
-    df_plot['PCT_change'] = df_plot.apply(calculate_diff, axis=1)
-    # remove nan values from calculations
-    df_plot = df_plot.dropna()
+    df_plot['PCT_change'] = (df_plot.Price / df_plot.Last_year_price - 1) * 100
 
     # calculate avg price change
     price_median = df_plot.groupby('Year_diff')['PCT_change'].median()

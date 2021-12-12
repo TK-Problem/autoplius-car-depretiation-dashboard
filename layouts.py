@@ -104,8 +104,8 @@ tabs_layout = dbc.Collapse(
                      children=[
 
                          dcc.Tab(label='Kainų kitimas', children=[tab1_content], value='tab-1'),
-                         dcc.Tab(label='Kainų kitimo dinamika', children=[tab2_content], value='tab-2'),
-                         dcc.Tab(label='Kainos nuvertėjimo modelis', children=[tab3_content], value='tab-3')
+                         dcc.Tab(label='Nuvertėjimo tendencijos', children=[tab2_content], value='tab-2'),
+                         dcc.Tab(label='Kainos įvertinimas', children=[tab3_content], value='tab-3')
 
                                 ]),
             html.Br(),
