@@ -145,25 +145,29 @@ def update_tab_1_chart(car_name, year_made):
 @app.callback(
     [Output("tab-2-deval-chart", "figure"),
      Output("tab-2-chart-fig-des", "children")],
-    [Input(component_id='car-name-drop-menu',
-           component_property='value')])
-def update_tab_2_chart(car_name):
+    [Input('car-name-drop-menu', 'value'),
+     Input('tab-2-change-graph-type-btn', 'n_clicks')])
+def update_tab_2_chart(car_name, n):
     global df_dev
     if car_name == 'car-name':
         return no_update
     # select specific data
     df_plot, price_median = utils.get_data_tab_2_graph(df_dev, car_name)
 
-    # create figure with min, max and avg. price changes
-    fig = px.line(df_plot, x="Year_diff", y="PCT_change",
-                  color='Range', hover_data=['Hover_msg'],
-                  labels={'PCT_change': 'Metinis kainos pokytis (%)', 'Year_diff': 'Metų skaičius nuo pagaminimo'})
+    if n % 2 == 0:
+        # create figure with min, max and avg. price changes
+        fig = px.line(df_plot, x="Year_diff", y="PCT_change",
+                      color='Range', hover_data=['Hover_msg'],
+                      labels={'PCT_change': 'Metinis kainos pokytis (%)', 'Year_diff': 'Metų skaičius nuo pagaminimo'})
+        # update hovering
+        fig.update_traces(mode="markers", hovertemplate='%{customdata[0]}')
 
-    # update hovering
-    fig.update_traces(mode="markers", hovertemplate='%{customdata[0]}')
-
-    # car model
-    # car_model = ' '.join(car_name.split()[1:])
+    else:
+        # check if box-plot
+        fig = px.box(df_plot, x="Year_diff", y="PCT_change", color='Range', hover_data=['Hover_msg'],
+                     labels={'PCT_change': 'Metinis kainos pokytis (%)', 'Year_diff': 'Metų skaičius nuo pagaminimo'})
+        # update hovering
+        fig.update_traces(hovertemplate='%{customdata[0]}')
 
     # add median yearly price change
     fig.add_trace(go.Scatter(x=price_median.index, y=price_median, name=f'Metinio {car_name} kainos pokyčio mediana',
@@ -176,9 +180,11 @@ def update_tab_2_chart(car_name):
     if price_median.max() * 5 < df_plot.PCT_change.max() or price_median.min() * 5 > df_plot.PCT_change.min():
         fig.update_yaxes(range=[df_plot.PCT_change.quantile(0.05), df_plot.PCT_change.quantile(0.95)])
 
+    # update hover template
     fig.update_layout(legend_title_text='',
                       template=utils.my_template,
                       legend=dict(orientation="h", yanchor="top", y=1.2, xanchor="center", x=0.5, font_size=14))
+
     txt = f"Šią tendenciją palyginame su visų {car_name.split()[0]} pagamintų automobilių " \
           f"ir visų automobilių vidutine kainos kitimo tendencijomis. "
     return fig, txt

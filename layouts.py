@@ -76,6 +76,9 @@ tab2_content = dbc.Card(
                    "galėjo būti išskaičiuota iš 1 skelbimo arba iš >100. Mes geriausiu atveju galime įvertinti kainos "
                    "kritimo tendenciją, kurią apskaičiuojau kainos pokyčių medianos.", className="card-text"),
             dcc.Graph(id="tab-2-deval-chart", config={'displayModeBar': False, 'responsive': False}),
+            dbc.Button("Pakeisti grafiko tipą", id="tab-2-change-graph-type-btn",
+                       className="btn btn-dark", n_clicks=0),
+            html.Hr(),
             html.P("Šią tendenciją galime palyginti su visų X gamintojo automobilių vidutinę kainos kitimo tendenciją "
                    "ir visų automobilių kitimo tendencija.", id='tab-2-chart-fig-des', className="card-text"),
         ]
