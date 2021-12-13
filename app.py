@@ -19,9 +19,13 @@ car_name_dict = [{'label': _, 'value': _} for _ in df_png.Car.unique()]
 # reset index for simpler data accessing
 df_png.set_index(['Car', 'Year_made'], inplace=True)
 # download devaluation data
-df_dev = pd.read_csv('https://www.dropbox.com/s/81pxbt3sila32ao/0_all_deval_prices.csv?dl=1')
+DF_DEV = pd.read_csv('https://www.dropbox.com/s/81pxbt3sila32ao/0_all_deval_prices.csv?dl=1')
 # reduce memory usage for better performance
-df_dev = utils.reduce_mem_usage(df_dev)
+DF_DEV = utils.reduce_mem_usage(DF_DEV)
+# transform DataFrame for plotting, calculate yearly changes
+DF_YEARLY = utils.calculate_yearly_changes(DF_DEV)
+# calculate median yearly price change
+YEARLY_MEDIAN = DF_YEARLY.groupby('Year_diff')['PCT_change'].median()
 
 
 app = Dash(__name__,
@@ -118,13 +122,12 @@ def autoplius_png(car_name, year_made):
     [Input(component_id='car-name-drop-menu', component_property='value'),
      Input(component_id='car-year-drop-menu', component_property='value')])
 def update_tab_1_chart(car_name, year_made):
-    global df_dev
     # no changes are made if default dropdown menu values are provided
     if year_made == 'year' or car_name == 'car-name':
         return no_update
 
     # generate data for left graph
-    df_plot = utils.get_data_tab_1_graph(df_dev, car_name, year_made)
+    df_plot = utils.get_data_tab_1_graph(DF_DEV, car_name, year_made)
 
     # create figure object
     fig = px.line(df_plot, x="Year", y="Price", color='Range', hover_data=['Msg', 'Range'],
@@ -146,17 +149,24 @@ def update_tab_1_chart(car_name, year_made):
     [Output("tab-2-deval-chart", "figure"),
      Output("tab-2-chart-fig-des", "children")],
     [Input('car-name-drop-menu', 'value'),
+     Input('tab-2-radio-items', 'value'),
      Input('tab-2-change-graph-type-btn', 'n_clicks')])
-def update_tab_2_charts(car_name, n):
-    global df_dev
+def update_tab_2_charts(car_name, radio_value, n):
+
     if car_name == 'car-name':
         return no_update
     # select specific data
-    df_tab_2_1, median_model, median_manu = utils.get_data_tab_2_graph(df_dev, car_name)
+    df_tab_2_model, df_tab_2_manu, median_model, median_manu = utils.get_data_tab_2_graph(DF_YEARLY, car_name)
+
+    if radio_value == 'MODEL':
+        df_plot = df_tab_2_model
+    else:
+        # for manufacturer prices select years specific model was sold on autoplius website
+        df_plot = df_tab_2_manu.loc[df_tab_2_manu.Year_diff.isin(df_tab_2_model.Year_diff.unique())]
 
     if n % 2 == 0:
         # create figure with min, max and avg. price changes
-        fig = px.line(df_tab_2_1, x="Year_diff", y="PCT_change",
+        fig = px.line(df_plot, x="Year_diff", y="PCT_change",
                       color='Range', hover_data=['Hover_msg'],
                       labels={'PCT_change': 'Metinis kainos pokytis (%)', 'Year_diff': 'Metų skaičius nuo pagaminimo'})
         # update hovering
@@ -164,7 +174,7 @@ def update_tab_2_charts(car_name, n):
 
     else:
         # check if box-plot
-        fig = px.box(df_tab_2_1, x="Year_diff", y="PCT_change", color='Range', hover_data=['Hover_msg'],
+        fig = px.box(df_plot, x="Year_diff", y="PCT_change", color='Range', hover_data=['Hover_msg'],
                      labels={'PCT_change': 'Metinis kainos pokytis (%)', 'Year_diff': 'Metų skaičius nuo pagaminimo'})
         # update hovering
         fig.update_traces(hovertemplate='%{customdata[0]}')
@@ -174,22 +184,31 @@ def update_tab_2_charts(car_name, n):
                              marker=dict(size=10), line=dict(color='firebrick', width=4, shape='spline'),
                              hovertemplate='%{y:.1f}%'))
 
-    # add median yearly model's price change
+    # add median yearly manufacturer's price change
     fig.add_trace(go.Scatter(x=median_manu.index, y=median_manu,
                              name=f'Visų {car_name.split()[0]} modelių kainos pokyčio mediana',
                              marker=dict(size=10), line=dict(color='teal', width=4, shape='spline'),
                              hovertemplate='%{y:.1f}%'))
 
+    # add median yearly all cars and price ranges price change
+    fig.add_trace(go.Scatter(x=YEARLY_MEDIAN.loc[median_model.index].index,
+                             y=YEARLY_MEDIAN.loc[median_model.index],
+                             name=f'Visų automobilių modelių kainos pokyčio mediana',
+                             marker=dict(size=10), line=dict(color='GoldenRod', width=4, shape='spline'),
+                             hovertemplate='%{y:.1f}%'))
+
     # update axis values
     fig.update_xaxes(tickvals=np.arange(median_model.index.min(), median_model.index.max() + 1))
     # limit y- axis range if outliers are present
-    if median_model.max() * 5 < df_tab_2_1.PCT_change.max() or median_model.min() * 5 > df_tab_2_1.PCT_change.min():
-        fig.update_yaxes(range=[df_tab_2_1.PCT_change.quantile(0.05), df_tab_2_1.PCT_change.quantile(0.95)])
+    _low = median_model.max() * 5 < df_tab_2_model.PCT_change.max()
+    _high = median_model.min() * 5 > df_tab_2_model.PCT_change.min()
+    if _low or _high:
+        fig.update_yaxes(range=[df_tab_2_model.PCT_change.quantile(0.05), df_tab_2_model.PCT_change.quantile(0.95)])
 
     # update hover template
     fig.update_layout(legend_title_text='',
                       template=utils.my_template,
-                      legend=dict(orientation="h", yanchor="top", y=1.2, xanchor="center", x=0.5, font_size=14))
+                      legend=dict(orientation="h", yanchor="top", y=1.3, xanchor="center", x=0.5, font_size=14))
 
     txt = f"Šią tendenciją palyginame su visų {car_name.split()[0]} pagamintų automobilių " \
           f"ir visų automobilių vidutine kainos kitimo tendencijomis. "

@@ -147,22 +147,23 @@ def get_data_tab_2_graph(df, car_name):
     Output:
         pandas DataFrame
     """
-    # calculate yearly changes
-    df_yearly = calculate_yearly_changes(df)
+    # copy yearly change DataFrame
+    df_yearly = df.copy()
 
     # get car's manufacturer name
     car_manufacturer = car_name.split()[0]
 
     # create condition to select all cars from same manufacturer
     cond = df_yearly.Car.apply(lambda x: x.split()[0])
-    # calculate median car's manufacturer price change
-    median_manu = df_yearly.loc[cond == car_manufacturer].groupby('Year_diff')['PCT_change'].median()
-
+    # select data only for chosen car manufacturer
+    df_plot_manu = df_yearly.loc[cond == car_manufacturer].copy()
     # select data only for chosen car name
-    df_plot = df_yearly.loc[df_yearly.Car == car_name].copy()
+    df_plot_model = df_yearly.loc[df_yearly.Car == car_name].copy()
 
     # calculate median model price change
-    median_model = df_plot.groupby('Year_diff')['PCT_change'].median()
+    median_model = df_plot_model.groupby('Year_diff')['PCT_change'].median()
+    # calculate median car's manufacturer price change
+    median_manu = df_plot_manu.groupby('Year_diff')['PCT_change'].median()
 
     def gen_hover_txt(row):
         """
@@ -185,11 +186,13 @@ def get_data_tab_2_graph(df, car_name):
         # remove y-axis label from appearing during hover
         return msg + '<extra></extra>'
 
-    # generate hover message
-    df_plot['Hover_msg'] = df_plot.apply(gen_hover_txt, axis=1)
+    # generate hover messages
+    df_plot_model['Hover_msg'] = df_plot_model.apply(gen_hover_txt, axis=1)
+    df_plot_manu['Hover_msg'] = df_plot_manu.apply(gen_hover_txt, axis=1)
 
     # flip order for plotly colors, the highest price should be first, lowest- last
-    df_plot = df_plot.iloc[::-1]
+    df_plot_model = df_plot_model.iloc[::-1]
+    df_plot_manu = df_plot_manu.iloc[::-1]
 
-    # for manufacturer prices select years specific model was sold on autoplius
-    return df_plot, median_model, median_manu.loc[median_model.index]
+    # for manufacturer prices select years specific model was sold on autoplius website
+    return df_plot_model, df_plot_manu, median_model, median_manu.loc[median_model.index]

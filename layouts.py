@@ -75,12 +75,17 @@ tab2_content = dbc.Card(
             html.P("Iš surinktų autoplius duomenų mes negalime įvertinti kainų rėžių tikslumo. Dižiausia X metų kaina "
                    "galėjo būti išskaičiuota iš 1 skelbimo arba iš >100. Mes geriausiu atveju galime įvertinti kainos "
                    "kritimo tendenciją, kurią apskaičiuojau kainos pokyčių medianos.", className="card-text"),
+            html.P("Šią tendenciją galime palyginti su visų X gamintojo automobilių vidutinę kainos kitimo tendenciją "
+                   "ir visų automobilių kitimo tendencija.", id='tab-2-chart-fig-des', className="card-text"),
+            html.Hr(),
+            dbc.RadioItems(id="tab-2-radio-items", value='MODEL',
+                           options=[{'label': 'Modelis', 'value': 'MODEL'}, {'label': 'Gamintojas', 'value': 'MANU'}],
+                           labelCheckedClassName="text-secondary",
+                           inputCheckedClassName="border border-primary bg-primary"),
+            html.Hr(),
             dcc.Graph(id="tab-2-deval-chart", config={'displayModeBar': False, 'responsive': False}),
             dbc.Button("Pakeisti grafiko tipą", id="tab-2-change-graph-type-btn",
                        className="btn btn-dark", n_clicks=0),
-            html.Hr(),
-            html.P("Šią tendenciją galime palyginti su visų X gamintojo automobilių vidutinę kainos kitimo tendenciją "
-                   "ir visų automobilių kitimo tendencija.", id='tab-2-chart-fig-des', className="card-text"),
         ]
     ),
     className="mt-3",
