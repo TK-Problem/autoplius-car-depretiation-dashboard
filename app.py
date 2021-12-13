@@ -13,11 +13,11 @@ import utils
 from layouts import *
 
 # read .csv from dropbox link.
-df_png = pd.read_csv('https://www.dropbox.com/s/i9vzubdk5klhw5q/png_database.csv?dl=1')
+DF_PNG = pd.read_csv('https://www.dropbox.com/s/i9vzubdk5klhw5q/png_database.csv?dl=1')
 # generate car id dictionary for dropdown menu
-car_name_dict = [{'label': _, 'value': _} for _ in df_png.Car.unique()]
+car_name_dict = [{'label': _, 'value': _} for _ in DF_PNG.Car.unique()]
 # reset index for simpler data accessing
-df_png.set_index(['Car', 'Year_made'], inplace=True)
+DF_PNG.set_index(['Car', 'Year_made'], inplace=True)
 # download devaluation data
 DF_DEV = pd.read_csv('https://www.dropbox.com/s/81pxbt3sila32ao/0_all_deval_prices.csv?dl=1')
 # reduce memory usage for better performance
@@ -26,6 +26,11 @@ DF_DEV = utils.reduce_mem_usage(DF_DEV)
 DF_YEARLY = utils.calculate_yearly_changes(DF_DEV)
 # calculate median yearly price change
 YEARLY_MEDIAN = DF_YEARLY.groupby('Year_diff')['PCT_change'].median()
+# create grobal DataFrames for plotting
+DF_TAB_2_MODEL = pd.DataFrame()
+DF_TAB_2_MODEL_MEDIAN = pd.DataFrame()
+DF_TAB_2_MANU = pd.DataFrame()
+DF_TAB_2_MANU_MEDIAN = pd.DataFrame()
 
 
 app = Dash(__name__,
@@ -73,14 +78,20 @@ def update_year_made(car_name):
     Return:
         dict, years that car was made
     """
-    global df_png
+    global DF_TAB_2_MODEL, DF_TAB_2_MANU, DF_TAB_2_MODEL_MEDIAN, DF_TAB_2_MANU_MEDIAN
     # don't update during initial launch
     if car_name == 'car-name':
         return no_update
     # get only unique values for specific car years
-    years = df_png.loc[car_name].index
+    years = DF_PNG.loc[car_name].index
     years = [{'label': year, 'value': year} for year in years]
-    # update with the oldest available years
+
+    # quick but dirty solution to speed-up data loading, store element is not used- global variables isntead
+    # load specific data for plotting
+    DF_TAB_2_MODEL, DF_TAB_2_MANU, DF_TAB_2_MODEL_MEDIAN, DF_TAB_2_MANU_MEDIAN = utils.get_data_tab_2_graph(DF_YEARLY,
+                                                                                                            car_name)
+
+    # update dropdown with the oldest available years
     return years, years[0]['value'], True
 
 
@@ -105,7 +116,6 @@ def toggle_collapse(n, is_open):
     [Input(component_id='car-name-drop-menu', component_property='value'),
      Input(component_id='car-year-drop-menu', component_property='value')])
 def autoplius_png(car_name, year_made):
-    global df_png
     # generate message for graph
     msg = f"Lyginamosios kainos {year_made} metais pagamintų {car_name} automobilių kainos ir jų " \
           f"kitimas, neatsižvelgiant į automobilių komlektaciją ir būklę. "
@@ -114,7 +124,7 @@ def autoplius_png(car_name, year_made):
     if year_made == 'year' or car_name == 'car-name':
         return no_update
     else:
-        return [df_png.loc[(car_name, int(year_made))].png_url, msg]
+        return [DF_PNG.loc[(car_name, int(year_made))].png_url, msg]
 
 
 @app.callback(
@@ -148,21 +158,27 @@ def update_tab_1_chart(car_name, year_made):
 @app.callback(
     [Output("tab-2-deval-chart", "figure"),
      Output("tab-2-chart-fig-des", "children")],
-    [Input('car-name-drop-menu', 'value'),
+    [Input('tabs-collapse', 'is_open'),
      Input('tab-2-radio-items', 'value'),
      Input('tab-2-change-graph-type-btn', 'n_clicks')])
-def update_tab_2_charts(car_name, radio_value, n):
+def update_tab_2_charts(tabs_open, radio_value, n):
 
-    if car_name == 'car-name':
+    # no update during initial app launch
+    if not tabs_open:
         return no_update
-    # select specific data
-    df_tab_2_model, df_tab_2_manu, median_model, median_manu = utils.get_data_tab_2_graph(DF_YEARLY, car_name)
+
+    # if limited amount of data available don't update
+    if not len(DF_TAB_2_MODEL):
+        return no_update, 'Permažai duomenų, kad galima būtų įvertinti kainų kitimo tendenciją.'
+
+    # get car name from global DataFrame
+    car_name = DF_TAB_2_MODEL.Car.unique()[0]
 
     if radio_value == 'MODEL':
-        df_plot = df_tab_2_model
+        df_plot = DF_TAB_2_MODEL
     else:
         # for manufacturer prices select years specific model was sold on autoplius website
-        df_plot = df_tab_2_manu.loc[df_tab_2_manu.Year_diff.isin(df_tab_2_model.Year_diff.unique())]
+        df_plot = DF_TAB_2_MANU.loc[DF_TAB_2_MANU.Year_diff.isin(DF_TAB_2_MODEL.Year_diff.unique())]
 
     if n % 2 == 0:
         # create figure with min, max and avg. price changes
@@ -180,30 +196,31 @@ def update_tab_2_charts(car_name, radio_value, n):
         fig.update_traces(hovertemplate='%{customdata[0]}')
 
     # add median yearly model's price change
-    fig.add_trace(go.Scatter(x=median_model.index, y=median_model, name=f'{car_name} kainos pokyčio mediana',
+    fig.add_trace(go.Scatter(x=DF_TAB_2_MODEL_MEDIAN.index, y=DF_TAB_2_MODEL_MEDIAN,
+                             name=f'{car_name} kainos pokyčio mediana',
                              marker=dict(size=10), line=dict(color='firebrick', width=4, shape='spline'),
                              hovertemplate='%{y:.1f}%'))
 
     # add median yearly manufacturer's price change
-    fig.add_trace(go.Scatter(x=median_manu.index, y=median_manu,
+    fig.add_trace(go.Scatter(x=DF_TAB_2_MANU_MEDIAN.index, y=DF_TAB_2_MANU_MEDIAN,
                              name=f'Visų {car_name.split()[0]} modelių kainos pokyčio mediana',
                              marker=dict(size=10), line=dict(color='teal', width=4, shape='spline'),
                              hovertemplate='%{y:.1f}%'))
 
     # add median yearly all cars and price ranges price change
-    fig.add_trace(go.Scatter(x=YEARLY_MEDIAN.loc[median_model.index].index,
-                             y=YEARLY_MEDIAN.loc[median_model.index],
+    fig.add_trace(go.Scatter(x=YEARLY_MEDIAN.loc[DF_TAB_2_MODEL_MEDIAN.index].index,
+                             y=YEARLY_MEDIAN.loc[DF_TAB_2_MODEL_MEDIAN.index],
                              name=f'Visų automobilių modelių kainos pokyčio mediana',
                              marker=dict(size=10), line=dict(color='GoldenRod', width=4, shape='spline'),
                              hovertemplate='%{y:.1f}%'))
 
     # update axis values
-    fig.update_xaxes(tickvals=np.arange(median_model.index.min(), median_model.index.max() + 1))
+    fig.update_xaxes(tickvals=np.arange(DF_TAB_2_MODEL_MEDIAN.index.min(), DF_TAB_2_MODEL_MEDIAN.index.max() + 1))
     # limit y- axis range if outliers are present
-    _low = median_model.max() * 5 < df_tab_2_model.PCT_change.max()
-    _high = median_model.min() * 5 > df_tab_2_model.PCT_change.min()
+    _low = DF_TAB_2_MODEL_MEDIAN.max() * 5 < DF_TAB_2_MODEL.PCT_change.max()
+    _high = DF_TAB_2_MODEL_MEDIAN.min() * 5 > DF_TAB_2_MODEL.PCT_change.min()
     if _low or _high:
-        fig.update_yaxes(range=[df_tab_2_model.PCT_change.quantile(0.05), df_tab_2_model.PCT_change.quantile(0.95)])
+        fig.update_yaxes(range=[DF_TAB_2_MODEL.PCT_change.quantile(0.05), DF_TAB_2_MODEL.PCT_change.quantile(0.95)])
 
     # update hover template
     fig.update_layout(legend_title_text='',
