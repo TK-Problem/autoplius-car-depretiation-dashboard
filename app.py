@@ -147,16 +147,16 @@ def update_tab_1_chart(car_name, year_made):
      Output("tab-2-chart-fig-des", "children")],
     [Input('car-name-drop-menu', 'value'),
      Input('tab-2-change-graph-type-btn', 'n_clicks')])
-def update_tab_2_chart(car_name, n):
+def update_tab_2_charts(car_name, n):
     global df_dev
     if car_name == 'car-name':
         return no_update
     # select specific data
-    df_plot, price_median = utils.get_data_tab_2_graph(df_dev, car_name)
+    df_tab_2_1, median_model, median_manu = utils.get_data_tab_2_graph(df_dev, car_name)
 
     if n % 2 == 0:
         # create figure with min, max and avg. price changes
-        fig = px.line(df_plot, x="Year_diff", y="PCT_change",
+        fig = px.line(df_tab_2_1, x="Year_diff", y="PCT_change",
                       color='Range', hover_data=['Hover_msg'],
                       labels={'PCT_change': 'Metinis kainos pokytis (%)', 'Year_diff': 'Metų skaičius nuo pagaminimo'})
         # update hovering
@@ -164,21 +164,27 @@ def update_tab_2_chart(car_name, n):
 
     else:
         # check if box-plot
-        fig = px.box(df_plot, x="Year_diff", y="PCT_change", color='Range', hover_data=['Hover_msg'],
+        fig = px.box(df_tab_2_1, x="Year_diff", y="PCT_change", color='Range', hover_data=['Hover_msg'],
                      labels={'PCT_change': 'Metinis kainos pokytis (%)', 'Year_diff': 'Metų skaičius nuo pagaminimo'})
         # update hovering
         fig.update_traces(hovertemplate='%{customdata[0]}')
 
-    # add median yearly price change
-    fig.add_trace(go.Scatter(x=price_median.index, y=price_median, name=f'Metinio {car_name} kainos pokyčio mediana',
+    # add median yearly model's price change
+    fig.add_trace(go.Scatter(x=median_model.index, y=median_model, name=f'{car_name} kainos pokyčio mediana',
                              marker=dict(size=10), line=dict(color='firebrick', width=4, shape='spline'),
                              hovertemplate='%{y:.1f}%'))
 
+    # add median yearly model's price change
+    fig.add_trace(go.Scatter(x=median_manu.index, y=median_manu,
+                             name=f'Visų {car_name.split()[0]} modelių kainos pokyčio mediana',
+                             marker=dict(size=10), line=dict(color='teal', width=4, shape='spline'),
+                             hovertemplate='%{y:.1f}%'))
+
     # update axis values
-    fig.update_xaxes(tickvals=np.arange(price_median.index.min(), price_median.index.max() + 1))
+    fig.update_xaxes(tickvals=np.arange(median_model.index.min(), median_model.index.max() + 1))
     # limit y- axis range if outliers are present
-    if price_median.max() * 5 < df_plot.PCT_change.max() or price_median.min() * 5 > df_plot.PCT_change.min():
-        fig.update_yaxes(range=[df_plot.PCT_change.quantile(0.05), df_plot.PCT_change.quantile(0.95)])
+    if median_model.max() * 5 < df_tab_2_1.PCT_change.max() or median_model.min() * 5 > df_tab_2_1.PCT_change.min():
+        fig.update_yaxes(range=[df_tab_2_1.PCT_change.quantile(0.05), df_tab_2_1.PCT_change.quantile(0.95)])
 
     # update hover template
     fig.update_layout(legend_title_text='',

@@ -14,7 +14,7 @@ my_template.layout['xaxis']['gridcolor'] = 'rgba(1,1,1,0.3)'
 # reduce memory usage if available
 def reduce_mem_usage(df, verbose=False):
     """
-    Change pandas dtypes to reduce memory usage
+    This function change pandas dtypes to reduce memory usage
     Input:
         df, pandas DataFrame
         verbose, bool, if True print message
@@ -44,6 +44,7 @@ def reduce_mem_usage(df, verbose=False):
                     df[col] = df[col].astype(np.float64)
                 else:
                     df[col] = df[col].astype(np.float64)
+    # calculate memory after reduction
     end_mem = df.memory_usage().sum() / 1024**2
     if verbose:
         # reduced memory usage in percent
@@ -51,6 +52,40 @@ def reduce_mem_usage(df, verbose=False):
         msg = f'Mem. usage decreased to {end_mem:5.2f} Mb ({diff_pst:.1f}% reduction)'
         print(msg)
     return df
+
+
+def calculate_yearly_changes(df):
+    """
+    Transforms pandas DataFrame for plotting yearly price changes
+    Input:
+        df, pandas DataFrame
+    Output:
+        pandas DataFrame
+    """
+    # select copy of DataFrame
+    _df = df.copy()
+
+    # calculate how many years passed
+    _df['Year_diff'] = _df['Year'] - _df['Year_made']
+    # reshape DataFrame
+    _df = pd.melt(_df[['Year_made', 'Car', 'Low', 'Medium', 'High', 'Year_diff']],
+                  id_vars=['Year_made', 'Car', 'Year_diff'], var_name='Range', value_name='Price')
+
+    # rename price ranges to lithuanian
+    _df.Range = _df.Range.replace({'Low': 'Mažiausios kainos pokyčiai',
+                                   'Medium': 'Vidutinės kainos pokyčiai',
+                                   'High': 'Didžiausios kainos pokyčiai'})
+
+    # calculate last year price
+    _df['Last_year_price'] = _df['Price'].shift(1)
+
+    # select only those entries where time difference is 1 year
+    _df = _df.loc[_df.Year_diff - _df.Year_diff.shift(1) == 1]
+
+    # calculate percentage price changes
+    _df['PCT_change'] = (_df.Price / _df.Last_year_price - 1) * 100
+
+    return _df
 
 
 def get_data_tab_1_graph(df, car_name, year_made):
@@ -104,7 +139,7 @@ def get_data_tab_1_graph(df, car_name, year_made):
 
 def get_data_tab_2_graph(df, car_name):
     """
-    Transforms pandas DataFrame for plotling prices.
+    Transforms pandas DataFrame for plotting prices.
     Calculates median price change
     Input:
         df, pandas DataFrame
@@ -112,30 +147,22 @@ def get_data_tab_2_graph(df, car_name):
     Output:
         pandas DataFrame
     """
+    # calculate yearly changes
+    df_yearly = calculate_yearly_changes(df)
+
+    # get car's manufacturer name
+    car_manufacturer = car_name.split()[0]
+
+    # create condition to select all cars from same manufacturer
+    cond = df_yearly.Car.apply(lambda x: x.split()[0])
+    # calculate median car's manufacturer price change
+    median_manu = df_yearly.loc[cond == car_manufacturer].groupby('Year_diff')['PCT_change'].median()
+
     # select data only for chosen car name
-    df_plot = df.loc[df.Car == car_name].copy()
-    # calculate how many years passed
-    df_plot['Year_diff'] = df_plot['Year'] - df_plot['Year_made']
-    # reshape DataFrame
-    df_plot = pd.melt(df_plot[['Year_made', 'Car', 'Low', 'Medium', 'High', 'Year_diff']],
-                      id_vars=['Year_made', 'Car', 'Year_diff'], var_name='Range', value_name='Price')
+    df_plot = df_yearly.loc[df_yearly.Car == car_name].copy()
 
-    # rename price ranges to lithuanian
-    df_plot.Range = df_plot.Range.replace({'Low': 'Mažiausios kainos pokyčiai',
-                                           'Medium': 'Vidutinės kainos pokyčiai',
-                                           'High': 'Didžiausios kainos pokyčiai'})
-
-    # calculate last year price
-    df_plot['Last_year_price'] = df_plot['Price'].shift(1)
-
-    # select only those entries where time difference is 1 year
-    df_plot = df_plot.loc[df_plot.Year_diff - df_plot.Year_diff.shift(1) == 1]
-
-    # calculate percentage price changes
-    df_plot['PCT_change'] = (df_plot.Price / df_plot.Last_year_price - 1) * 100
-
-    # calculate avg price change
-    price_median = df_plot.groupby('Year_diff')['PCT_change'].median()
+    # calculate median model price change
+    median_model = df_plot.groupby('Year_diff')['PCT_change'].median()
 
     def gen_hover_txt(row):
         """
@@ -164,4 +191,5 @@ def get_data_tab_2_graph(df, car_name):
     # flip order for plotly colors, the highest price should be first, lowest- last
     df_plot = df_plot.iloc[::-1]
 
-    return df_plot, price_median
+    # for manufacturer prices select years specific model was sold on autoplius
+    return df_plot, median_model, median_manu.loc[median_model.index]
