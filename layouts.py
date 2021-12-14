@@ -93,17 +93,19 @@ tab2_content = dbc.Card(
 )
 
 
-tab3_content = dbc.Card(
-    dbc.CardBody(
-        [
-            html.H4("Duomenų įvedimas", className="card-title"),
-            html.P("Laikinas tekstas", className="card-text"),
-            html.H3("Tiesinis modelis #1", className="card-title"),
-            html.P("Apskaičiuoja vidutinę kainos nuvertėjimą iš:", className="card-text")
-        ]
-    ),
-    className="mt-3",
-)
+# tab3_content = dbc.Card(
+#     dbc.CardBody(
+#         [
+#             html.H4("Pagaminimo metai", className="card-title"),
+#             dcc.Slider(id='car-year-slider', min=2009, max=2020, step=1, value=2010),
+#             html.H4("Duomenų įvedimas", className="card-title"),
+#             html.P("Laikinas tekstas", className="card-text"),
+#             html.H3("Tiesinis modelis #1", className="card-title"),
+#             html.P("Apskaičiuoja vidutinę kainos nuvertėjimą iš:", className="card-text")
+#         ]
+#     ),
+#     className="mt-3",
+# )
 
 tabs_layout = dbc.Collapse(
     html.Div(
@@ -114,7 +116,7 @@ tabs_layout = dbc.Collapse(
 
                          dcc.Tab(label='Kainų kitimas', children=[tab1_content], value='tab-1'),
                          dcc.Tab(label='Nuvertėjimo tendencijos', children=[tab2_content], value='tab-2'),
-                         dcc.Tab(label='Kainos įvertinimas', children=[tab3_content], value='tab-3')
+                         # dcc.Tab(label='Kainos įvertinimas', children=[tab3_content], value='tab-3')
 
                                 ]),
             html.Br(),

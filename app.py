@@ -26,7 +26,7 @@ DF_DEV = utils.reduce_mem_usage(DF_DEV)
 DF_YEARLY = utils.calculate_yearly_changes(DF_DEV)
 # calculate median yearly price change
 YEARLY_MEDIAN = DF_YEARLY.groupby('Year_diff')['PCT_change'].median()
-# create grobal DataFrames for plotting
+# create global DataFrames for plotting
 DF_TAB_2_MODEL = pd.DataFrame()
 DF_TAB_2_MODEL_MEDIAN = pd.DataFrame()
 DF_TAB_2_MANU = pd.DataFrame()
