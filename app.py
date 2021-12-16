@@ -65,34 +65,40 @@ app.layout = html.Div(
 
 
 @app.callback(
-    [Output(component_id='car-year-drop-menu', component_property='options'),
-     Output(component_id='car-year-drop-menu', component_property='value'),
-     Output(component_id='tabs-collapse', component_property='is_open')],
-    [Input(component_id='car-name-drop-menu', component_property='value')])
+    [Output('car-year-drop-menu', 'options'),
+     Output('tab-2-year-select', 'options'),
+     Output('car-year-drop-menu', 'value'),
+     Output('tabs-collapse', 'is_open')],
+    [Input('car-name-drop-menu', 'value')])
 def update_year_made(car_name):
     """
     Updates drop down list with years car was made.
     Dropdown menu value is set to oldest car made.
     Input:
         car_name, str
+        is_open, bool
     Return:
-        dict, years that car was made
+        dict, list, years that car was made, e.g. [{'label': 2009, 'value': 2009}, {'label': 2010, 'value': 2010}]
     """
     global DF_TAB_2_MODEL, DF_TAB_2_MANU, DF_TAB_2_MODEL_MEDIAN, DF_TAB_2_MANU_MEDIAN
     # don't update during initial launch
     if car_name == 'car-name':
         return no_update
+
     # get only unique values for specific car years
     years = DF_PNG.loc[car_name].index
+    # select only max 10 years old cars for calculating devaluation
+    years_select = [{'label': k, 'value': k} for k in years if k >= 2015]
+    # update png drop-down manu list year options
     years = [{'label': year, 'value': year} for year in years]
 
-    # quick but dirty solution to speed-up data loading, store element is not used- global variables isntead
+    # quick but dirty solution to speed-up data loading, store element is not used- global variables instead
     # load specific data for plotting
     DF_TAB_2_MODEL, DF_TAB_2_MANU, DF_TAB_2_MODEL_MEDIAN, DF_TAB_2_MANU_MEDIAN = utils.get_data_tab_2_graph(DF_YEARLY,
                                                                                                             car_name)
 
     # update dropdown with the oldest available years
-    return years, years[0]['value'], True
+    return years, years_select, years[0]['value'], True
 
 
 @app.callback(
@@ -108,6 +114,103 @@ def toggle_collapse(n, is_open):
         else:
             return not is_open, 'Slėpti originalų autoplius grafiką'
     return is_open, no_update
+
+
+@app.callback(
+    [Output("tab-2-calcualte-deval-btn", "disabled")],
+    [Input('tab-2-year-select', 'value'), Input('tab-2-price', 'value')]
+)
+def activate_calculation_btn(year_car_made, car_price):
+
+    if year_car_made is None or car_price is None:
+        return [True]
+
+    try:
+        # convert to integer
+        car_price = int(car_price)
+    except:
+        # if car price can't be converted to number ignore calculations
+        return [True]
+
+    if isinstance(car_price, int):
+        return [False]
+    return [True]
+
+
+@app.callback(
+    [Output("deval-calculation-results-collapse", "is_open"),
+     Output("tab-2-calc-chart", "figure"),
+     Output("markdown-text", "children")],
+    [Input("tab-2-calcualte-deval-btn", "n_clicks")],
+    [State('tab-2-year-select', 'value'), State('tab-2-price', 'value'),
+     State("deval-calculation-results-collapse", "is_open")],
+)
+def toggle_calculation_results(n, year_car_made, car_price, is_open):
+    if n:
+        # get devaluation years
+        _index = [_ - int(year_car_made) for _ in range(2021, 2026)]
+        # temp. DataFrame for plotting
+        _df = pd.DataFrame(index=_index)
+        _df['All'] = YEARLY_MEDIAN.loc[_index]
+        _df['Model'] = DF_TAB_2_MODEL_MEDIAN.loc[_index]
+        _df['Manu'] = DF_TAB_2_MANU_MEDIAN.loc[_index]
+        _df.loc[0] = [car_price, car_price, car_price]
+        # re-sort values
+        _df = _df.sort_index()
+        # get devaluation pct changes based on model
+        for i in range(1, 6):
+            _df.iloc[i] = _df.iloc[i - 1].values * (100 + _df.iloc[i].values) / 100
+
+        # round values
+        _df = _df.round()
+
+        # provide predictions 5 years in the future based on all car devaluation trends
+        # prediction based on all car devaluation
+        fig = go.Figure(data=go.Scatter(x=[_ for _ in range(2021, 2027)],
+                                        y=_df.All, name=f'Modelis #1',
+                                        marker=dict(size=10),
+                                        line=dict(color='GoldenRod', width=4, shape='spline')
+                                        )
+                        )
+
+        # prediction based on specific car model devaluation
+        fig.add_trace(go.Scatter(x=[_ for _ in range(2021, 2027)],
+                                 y=_df.Manu, name=f'Modelis #2',
+                                 marker=dict(size=10),
+                                 line=dict(color='firebrick', width=4, shape='spline')))
+
+        # prediction based on specific car manufacturer devaluation
+        fig.add_trace(go.Scatter(x=[_ for _ in range(2021, 2027)],
+                                 y=_df.Model, name=f'Modelis #3',
+                                 marker=dict(size=10),
+                                 line=dict(color='teal', width=4, shape='spline')))
+
+        # change tick range
+        fig.update_yaxes(tickformat='000')
+
+        # update legend location
+        fig.update_layout(legend_title_text='',
+                          hovermode="x unified",
+                          xaxis_title="Metai",
+                          yaxis_title="Kaina (€)",
+                          template=utils.my_template,
+                          legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5, font_size=14))
+
+        # get car manufacturer's name
+        car_manu = DF_TAB_2_MODEL.Car.values[0].split()[0]
+
+        markdown_text = f"""
+        Automobilio kainos kritimas yra įvertintas su 3-im modeliais:
+
+        * modelis #1- metinis kainos nuvertėjimas išskaičiuotas iš visų automobilių duomenų,
+        * modelis #2- metinis kainos nuvertėjimas išskaičiuotas tik iš {DF_TAB_2_MODEL.Car.values[0]} duomenų,
+        * modelis #3- metinis kainos nuvertėjimas išskaičiuotas iš visų {car_manu} gamintojo duomenų.
+        """
+
+        if not is_open:
+            return True, fig, markdown_text
+        return no_update, fig, markdown_text
+    return no_update
 
 
 @app.callback(
