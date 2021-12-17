@@ -2,10 +2,8 @@
 from dash import Dash, no_update
 from dash.dependencies import Input, Output, State
 # plotting libraries
-# import plotly.express as px
 import plotly.graph_objects as go
 # Data processing
-# import pandas as pd
 import numpy as np
 # custom helper functions
 import utils
@@ -19,7 +17,7 @@ car_name_dict = [{'label': _, 'value': _} for _ in DF_PNG.Car.unique()]
 # reset index for simpler data accessing
 DF_PNG.set_index(['Car', 'Year_made'], inplace=True)
 # download devaluation data
-DF_DEV = pd.read_csv('https://www.dropbox.com/s/81pxbt3sila32ao/0_all_deval_prices.csv?dl=1')
+DF_DEV = pd.read_csv('https://www.dropbox.com/s/g7u36zpj7i4hlxp/0_all_deval_prices_4.csv?dl=1')
 # reduce memory usage for better performance
 DF_DEV = utils.reduce_mem_usage(DF_DEV)
 # transform DataFrame for plotting, calculate yearly changes
@@ -32,12 +30,10 @@ DF_TAB_2_MODEL_MEDIAN = pd.DataFrame()
 DF_TAB_2_MANU = pd.DataFrame()
 DF_TAB_2_MANU_MEDIAN = pd.DataFrame()
 
-
 app = Dash(__name__,
            meta_tags=[{"name": "viewport", "content": "width=device-width"}],
            suppress_callback_exceptions=True)
 server = app.server
-
 
 app.layout = html.Div(
     [
@@ -68,6 +64,7 @@ app.layout = html.Div(
     [Output('car-year-drop-menu', 'options'),
      Output('tab-2-year-select', 'options'),
      Output('car-year-drop-menu', 'value'),
+     Output('tab-2-year-select', 'value'),
      Output('tabs-collapse', 'is_open')],
     [Input('car-name-drop-menu', 'value')])
 def update_year_made(car_name):
@@ -88,7 +85,7 @@ def update_year_made(car_name):
     # get only unique values for specific car years
     years = DF_PNG.loc[car_name].index
     # select only max 10 years old cars for calculating devaluation
-    years_select = [{'label': k, 'value': k} for k in years if k >= 2015]
+    # years_select = [{'label': k, 'value': k} for k in years if k >= 2015]
     # update png drop-down manu list year options
     years = [{'label': year, 'value': year} for year in years]
 
@@ -98,7 +95,7 @@ def update_year_made(car_name):
                                                                                                             car_name)
 
     # update dropdown with the oldest available years
-    return years, years_select, years[0]['value'], True
+    return years, years, years[0]['value'], years[0]['value'], True
 
 
 @app.callback(
@@ -121,7 +118,6 @@ def toggle_collapse(n, is_open):
     [Input('tab-2-year-select', 'value'), Input('tab-2-price', 'value')]
 )
 def activate_calculation_btn(year_car_made, car_price):
-
     if year_car_made is None or car_price is None:
         return [True]
 
@@ -147,43 +143,57 @@ def activate_calculation_btn(year_car_made, car_price):
 )
 def toggle_calculation_results(n, year_car_made, car_price, is_open):
     if n:
-        # get devaluation years
-        _index = [_ - int(year_car_made) for _ in range(2021, 2026)]
+        # get devaluation years 5 years in the future
+        _index = [_ - int(year_car_made) for _ in range(2022, 2027)]
+        # get only max range based on available data on all sales
+        _index = [_ for _ in _index if _ <= max(YEARLY_MEDIAN.index)]
         # temp. DataFrame for plotting
         _df = pd.DataFrame(index=_index)
         _df['All'] = YEARLY_MEDIAN.loc[_index]
-        _df['Model'] = DF_TAB_2_MODEL_MEDIAN.loc[_index]
-        _df['Manu'] = DF_TAB_2_MANU_MEDIAN.loc[_index]
+        _df = _df.join(DF_TAB_2_MODEL_MEDIAN).rename(columns={'PCT_change': 'Model'})
+        _df = _df.join(DF_TAB_2_MANU_MEDIAN).rename(columns={'PCT_change': 'Manu'})
         _df.loc[0] = [car_price, car_price, car_price]
         # re-sort values
         _df = _df.sort_index()
         # get devaluation pct changes based on model
-        for i in range(1, 6):
+        for i in range(1, len(_df)):
             _df.iloc[i] = _df.iloc[i - 1].values * (100 + _df.iloc[i].values) / 100
 
+        # add hover messages
+        for col_name in ['All', 'Model', 'Manu']:
+            _df.loc[_index, f'{col_name}_msg'] = 1 - _df[col_name] / car_price
+            _df.loc[_index,
+                    f'{col_name}_msg'] = _df.loc[_index,
+                                                 f'{col_name}_msg'].apply(lambda x: f', {100 - x * 100:.1f}% vertės')
+            _df[f'{col_name}_msg'] = _df[f'{col_name}_msg'].fillna('')
+
+        # _df.loc[_index, 'All_msg'] = 1 - _df['All'] / car_price
+        # _df.loc[_index, 'All_msg'] = _df.loc[_index, 'All_msg'].apply(lambda x: f', {100 - x * 100:.1f}% vertės')
+        # _df['All_msg'] = _df['All_msg'].fillna('')
+
         # round values
-        _df = _df.round()
+        _df = _df.round(-2)
 
         # provide predictions 5 years in the future based on all car devaluation trends
-        # prediction based on all car devaluation
+        # prediction based on specific car model devaluation
         fig = go.Figure(data=go.Scatter(x=[_ for _ in range(2021, 2027)],
-                                        y=_df.All, name=f'Modelis #1',
-                                        marker=dict(size=10),
-                                        line=dict(color='GoldenRod', width=4, shape='spline')
-                                        )
+                                        y=_df.Model, name=f'Modelis #1', text=_df['Model_msg'],
+                                        marker=dict(size=10), hovertemplate='%{y}€%{text}',
+                                        line=dict(color='firebrick', width=4, shape='spline'))
                         )
 
-        # prediction based on specific car model devaluation
-        fig.add_trace(go.Scatter(x=[_ for _ in range(2021, 2027)],
-                                 y=_df.Manu, name=f'Modelis #2',
-                                 marker=dict(size=10),
-                                 line=dict(color='firebrick', width=4, shape='spline')))
-
         # prediction based on specific car manufacturer devaluation
-        fig.add_trace(go.Scatter(x=[_ for _ in range(2021, 2027)],
-                                 y=_df.Model, name=f'Modelis #3',
-                                 marker=dict(size=10),
+        fig.add_trace(go.Scatter(x=[_ for _ in range(2021, 2027)], text=_df['Manu_msg'],
+                                 y=_df.Manu, name=f'Modelis #2',
+                                 marker=dict(size=10), hovertemplate='%{y}€%{text}',
                                  line=dict(color='teal', width=4, shape='spline')))
+
+        # prediction based on all car devaluation
+        fig.add_trace(go.Scatter(x=[_ for _ in range(2021, 2027)], text=_df['All_msg'],
+                                 y=_df.All, name=f'Modelis #3',
+                                 marker=dict(size=10), hovertemplate='%{y}€%{text}',
+                                 line=dict(color='GoldenRod', width=4, shape='spline')
+                                 ))
 
         # change tick range
         fig.update_yaxes(tickformat='000')
@@ -201,16 +211,39 @@ def toggle_calculation_results(n, year_car_made, car_price, is_open):
 
         markdown_text = f"""
         Automobilio kainos kritimas yra įvertintas su 3-im modeliais:
-
-        * modelis #1- metinis kainos nuvertėjimas išskaičiuotas iš visų automobilių duomenų,
-        * modelis #2- metinis kainos nuvertėjimas išskaičiuotas tik iš {DF_TAB_2_MODEL.Car.values[0]} duomenų,
-        * modelis #3- metinis kainos nuvertėjimas išskaičiuotas iš visų {car_manu} gamintojo duomenų.
+        * modelis #1- metinis kainos nuvertėjimas išskaičiuotas tik iš {DF_TAB_2_MODEL.Car.values[0]}
+        * modelis #2- metinis kainos nuvertėjimas išskaičiuotas iš visų {car_manu} gamintojo duomenų,
+        * modelis #3- duomenų, metinis kainos nuvertėjimas išskaičiuotas iš visų automobilių duomenų.
         """
 
         if not is_open:
             return True, fig, markdown_text
         return no_update, fig, markdown_text
     return no_update
+
+
+@app.callback(
+    [Output('price-slider', 'min'),
+     Output('price-slider', 'max'),
+     Output('price-slider', 'value')],
+    Input('tab-2-year-select', 'value'),
+    State('car-name-drop-menu', 'value')
+)
+def update_slider(year_made, car_name):
+    # get price range for 2021 year
+    prices = DF_DEV.loc[(DF_DEV.Car == car_name) & (DF_DEV.Year_made == int(year_made)) & (DF_DEV.Year == 2021)].copy()
+    prices = prices[['Low', 'Medium', 'High']].values
+    if len(prices):
+        return prices.min(), prices.max(), prices.mean()
+    return no_update
+
+
+@app.callback(
+    Output('tab-2-price', 'value'),
+    Input('price-slider', 'value'))
+def update_price(price):
+    # return slider price rounded to hundreds
+    return round(int(price), -2)
 
 
 @app.callback(
@@ -265,7 +298,6 @@ def update_tab_1_chart(car_name, year_made):
      Input('tab-2-radio-items', 'value'),
      Input('tab-2-change-graph-type-btn', 'n_clicks')])
 def update_tab_2_charts(tabs_open, radio_value, n):
-
     # no update during initial app launch
     if not tabs_open:
         return no_update
@@ -305,7 +337,8 @@ def update_tab_2_charts(tabs_open, radio_value, n):
                              hovertemplate='%{y:.1f}%'))
 
     # add median yearly manufacturer's price change
-    fig.add_trace(go.Scatter(x=DF_TAB_2_MANU_MEDIAN.index, y=DF_TAB_2_MANU_MEDIAN,
+    fig.add_trace(go.Scatter(x=DF_TAB_2_MANU_MEDIAN.loc[DF_TAB_2_MODEL_MEDIAN.index].index,
+                             y=DF_TAB_2_MANU_MEDIAN.loc[DF_TAB_2_MODEL_MEDIAN.index],
                              name=f'Visų {car_name.split()[0]} modelių kainos pokyčio mediana',
                              marker=dict(size=10), line=dict(color='teal', width=4, shape='spline'),
                              hovertemplate='%{y:.1f}%'))

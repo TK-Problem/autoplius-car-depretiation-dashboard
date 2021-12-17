@@ -195,4 +195,4 @@ def get_data_tab_2_graph(df, car_name):
     df_plot_manu = df_plot_manu.iloc[::-1]
 
     # for manufacturer prices select years specific model was sold on autoplius website
-    return df_plot_model, df_plot_manu, median_model, median_manu.loc[median_model.index]
+    return df_plot_model, df_plot_manu, median_model, median_manu

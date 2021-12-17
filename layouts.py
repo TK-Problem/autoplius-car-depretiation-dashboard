@@ -94,8 +94,8 @@ tab2_content = dbc.Card(
                 [
                     dbc.FormFloating(
                         [
-                            dbc.Input(id='tab-2-price', placeholder="10000",
-                                      type="number", min=5000, max=100000, step=100,
+                            dbc.Input(id='tab-2-price', placeholder=100,
+                                      type="number", min=500, max=100000, step=100,
                                       style={'text-align': 'right'}),
                             dbc.Label("Automobilio kaina"),
                         ]
@@ -103,8 +103,7 @@ tab2_content = dbc.Card(
                     html.Span("€", className='input-group-text'),
                 ]
                 , className='input-group mb-3'),
-
-            html.Div("Tekstas", id='tab-2-price_check', className='invalid-feedback'),
+            html.Div(dcc.Slider(id='price-slider', min=0, max=100, value=50, included=False), style={'width': '310px'}),
             dbc.Button("Skaičiuoti", id="tab-2-calcualte-deval-btn", className="btn btn-dark",
                        n_clicks=0, disabled=True),
             dbc.Collapse(
@@ -121,24 +120,6 @@ tab2_content = dbc.Card(
     className="mt-3",
 )
 
-# tab3_content = dbc.Card(
-#     dbc.CardBody(
-#         [
-#             html.H4("Pagaminimo metai", className="card-title"),
-#             dcc.Dropdown(id='car-year-drop-msenu', options=[], value='year', clearable=False,
-#                          placeholder="Pasirinkite mašinos pagaminimo metus"),
-#             html.Br(),
-#             dcc.Slider(id='car-year-slider', min=1, max=10, step=1, value=1,
-#                        marks={year: str(year) for year in range(1, 11)}),
-#             html.H4("Duomenų įvedimas", className="card-title"),
-#             html.P("Laikinas tekstas", className="card-text"),
-#             html.H3("Tiesinis modelis #1", className="card-title"),
-#             html.P("Apskaičiuoja vidutinę kainos nuvertėjimą iš:", className="card-text")
-#         ]
-#     ),
-#     className="mt-3",
-# )
-
 tabs_layout = dbc.Collapse(
     html.Div(
         [
@@ -148,7 +129,7 @@ tabs_layout = dbc.Collapse(
 
                          dcc.Tab(label='Kainų kitimas', children=[tab1_content], value='tab-1'),
                          dcc.Tab(label='Nuvertėjimo tendencijos', children=[tab2_content], value='tab-2'),
-                         # dcc.Tab(label='Kainos įvertinimas', children=[tab3_content], value='tab-3')
+
 
                      ]),
             html.Br(),
